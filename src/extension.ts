@@ -16,15 +16,18 @@ function findServerCommand(): string {
 	const configured = vscode.workspace
 		.getConfiguration('larvae')
 		.get<string>('path')
+
 	if (configured && configured.trim().length > 0) {
 		return configured.trim()
 	}
 	// `larvae self install` puts the binary here; it may not be on VS Code's
 	// PATH (e.g. when launched from a desktop shell), so fall back to it.
 	const installed = path.join(os.homedir(), '.larvae', 'bin', 'larvae')
+
 	if (fs.existsSync(installed)) {
 		return installed
 	}
+
 	return 'larvae'
 }
 
@@ -50,11 +53,13 @@ async function startClient(): Promise<void> {
 		await client.start()
 	} catch {
 		client = undefined
+
 		const choice = await vscode.window.showErrorMessage(
 			`Failed to start the larvae language server ("${command} lsp"). ` +
 				'Is larvae installed and on your PATH?',
 			'Open Settings',
 		)
+
 		if (choice === 'Open Settings') {
 			await vscode.commands.executeCommand(
 				'workbench.action.openSettings',
@@ -75,26 +80,24 @@ function runProcess(
 	profile: string,
 ): Promise<void> {
 	return new Promise((resolve) => {
-		const command = findServerCommand()
-		const args = ['process']
-		if (profile) {
-			args.push('--profile', profile)
-		}
+		const command = findServerCommand(),
+			args = ['process']
+		if (profile) args.push('--profile', profile)
+
 		const output = processOutput
 		output?.appendLine(`[${folder.name}] ${command} ${args.join(' ')}`)
+
 		execFile(
 			command,
 			args,
 			{ cwd: folder.uri.fsPath },
 			(error, stdout, stderr) => {
-				if (stdout) {
-					output?.append(stdout)
-				}
-				if (stderr) {
-					output?.append(stderr)
-				}
+				if (stdout) output?.append(stdout)
+				if (stderr) output?.append(stderr)
+
 				if (error) {
 					output?.appendLine(`[${folder.name}] failed: ${error.message}`)
+
 					void vscode.window
 						.showErrorMessage('larvae process failed.', 'Show Output')
 						.then((choice) => {
@@ -103,6 +106,7 @@ function runProcess(
 							}
 						})
 				}
+
 				resolve()
 			},
 		)
@@ -110,23 +114,17 @@ function runProcess(
 }
 
 async function processOnSave(document: vscode.TextDocument): Promise<void> {
-	if (document.uri.scheme !== 'file') {
-		return
-	}
-	if (!['luau', 'luaux', 'lua'].includes(document.languageId)) {
-		return
-	}
-	const config = vscode.workspace.getConfiguration('larvae', document.uri)
-	if (!config.get<boolean>('processOnSave')) {
-		return
-	}
-	const folder = vscode.workspace.getWorkspaceFolder(document.uri)
-	if (!folder) {
-		return
-	}
+	if (document.uri.scheme !== 'file') return
+	if (!['luau', 'luaux', 'lua'].includes(document.languageId)) return
 
-	const key = folder.uri.toString()
-	const inFlight = processRuns.get(key)
+	const config = vscode.workspace.getConfiguration('larvae', document.uri)
+	if (!config.get<boolean>('processOnSave')) return
+
+	const folder = vscode.workspace.getWorkspaceFolder(document.uri)
+	if (!folder) return
+
+	const key = folder.uri.toString(),
+		inFlight = processRuns.get(key)
 	if (inFlight) {
 		inFlight.queued = true
 		return
@@ -134,9 +132,11 @@ async function processOnSave(document: vscode.TextDocument): Promise<void> {
 
 	const run = { queued: false }
 	processRuns.set(key, run)
+
 	try {
 		do {
 			run.queued = false
+
 			await runProcess(
 				folder,
 				config.get<string>('processProfile')?.trim() ?? '',
@@ -148,11 +148,12 @@ async function processOnSave(document: vscode.TextDocument): Promise<void> {
 }
 
 async function stopClient(): Promise<void> {
-	if (client) {
-		const stopping = client
-		client = undefined
-		await stopping.stop()
-	}
+	if (!client) return
+
+	const stopping = client
+	client = undefined
+
+	await stopping.stop()
 }
 
 export async function activate(
