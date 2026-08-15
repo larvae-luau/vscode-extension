@@ -137,7 +137,10 @@ async function processOnSave(document: vscode.TextDocument): Promise<void> {
 	try {
 		do {
 			run.queued = false
-			await runProcess(folder, config.get<string>('processProfile')?.trim() ?? '')
+			await runProcess(
+				folder,
+				config.get<string>('processProfile')?.trim() ?? '',
+			)
 		} while (run.queued)
 	} finally {
 		processRuns.delete(key)
