@@ -102,6 +102,98 @@ async function startClient(): Promise<void> {
 	}
 }
 
+const ALLOW_FLAG = /--\s*(?:larvae|selene):\s*allow\(([^)]*)\)/
+
+// Appends `-- larvae: allow(<rule>)` to the line, or merges the rule into an
+// allow flag already present on it.
+function buildAllowEdit(
+	document: vscode.TextDocument,
+	line: number,
+	rule: string,
+): vscode.WorkspaceEdit {
+	const edit = new vscode.WorkspaceEdit(),
+		lineText = document.lineAt(line),
+		existing = ALLOW_FLAG.exec(lineText.text)
+
+	if (existing) {
+		const rules = existing[1]
+			.split(',')
+			.map((entry) => entry.trim())
+			.filter((entry) => entry.length > 0)
+
+		let merged: string[]
+		if (rule === '*') {
+			merged = ['*']
+		} else if (rules.includes(rule) || rules.includes('*')) {
+			merged = rules
+		} else {
+			merged = [...rules, rule]
+		}
+
+		const open = existing.index + existing[0].indexOf('('),
+			close = existing.index + existing[0].lastIndexOf(')')
+
+		edit.replace(
+			document.uri,
+			new vscode.Range(line, open + 1, line, close),
+			merged.join(', '),
+		)
+	} else {
+		const spacer = /(^$|\s$)/.test(lineText.text) ? '' : ' '
+		edit.insert(
+			document.uri,
+			lineText.range.end,
+			`${spacer}-- larvae: allow(${rule})`,
+		)
+	}
+
+	return edit
+}
+
+const ignoreQuickFixProvider: vscode.CodeActionProvider = {
+	provideCodeActions(document, _range, context) {
+		const actions: vscode.CodeAction[] = [],
+			seenRules = new Set<string>(),
+			seenStarLines = new Set<number>()
+
+		for (const diagnostic of context.diagnostics) {
+			if (diagnostic.source !== 'larvae') continue
+
+			const code = rawLintCode(diagnostic.code)
+			if (!code) continue
+
+			const line = diagnostic.range.start.line
+
+			if (!seenRules.has(`${line}:${code}`)) {
+				seenRules.add(`${line}:${code}`)
+
+				const action = new vscode.CodeAction(
+					`Ignore ${code} on this line`,
+					vscode.CodeActionKind.QuickFix,
+				)
+				action.diagnostics = [diagnostic]
+				action.edit = buildAllowEdit(document, line, code)
+				action.isPreferred = true
+				actions.push(action)
+			}
+
+			if (!seenStarLines.has(line)) {
+				seenStarLines.add(line)
+
+				const action = new vscode.CodeAction(
+					'Ignore all larvae lints on this line',
+					vscode.CodeActionKind.QuickFix,
+				)
+				action.diagnostics = [diagnostic]
+				action.edit = buildAllowEdit(document, line, '*')
+				actions.push(action)
+			}
+		}
+
+		return actions
+	},
+}
+
 let processOutput: vscode.OutputChannel | undefined
 
 // One entry per workspace folder with a `larvae process` run in flight.
@@ -253,6 +345,17 @@ export async function activate(
 			await stopClient()
 			await startClient()
 		}),
+	)
+
+	context.subscriptions.push(
+		vscode.languages.registerCodeActionsProvider(
+			['luau', 'luaux', 'lua'].map((language) => ({
+				scheme: 'file' as const,
+				language,
+			})),
+			ignoreQuickFixProvider,
+			{ providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
+		),
 	)
 
 	processOutput = vscode.window.createOutputChannel('Larvae Process')
