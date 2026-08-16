@@ -24,7 +24,7 @@ jobs:
         run: npx @vscode/vsce package
 
       - name: Attach VSIX to release
-        run: gh release upload "$TAG" *.vsix
+        run: gh release upload "$TAG" *.vsix --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
