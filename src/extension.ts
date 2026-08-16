@@ -31,16 +31,16 @@ function findServerCommand(): string {
 	return 'larvae'
 }
 
-// unused_variable -> UnusedVariable
-function pascalCaseLintCode(
-	code: vscode.Diagnostic['code'],
-): string | undefined {
-	const raw = typeof code === 'object' ? code.value : code
-	if (typeof raw !== 'string' || raw.length === 0) {
-		return undefined
-	}
+const LINT_DOCS_URL = 'https://larvae-luau.github.io/docs/reference/linting'
 
-	return raw
+function rawLintCode(code: vscode.Diagnostic['code']): string | undefined {
+	const raw = typeof code === 'object' ? code.value : code
+	return typeof raw === 'string' && raw.length > 0 ? raw : undefined
+}
+
+// unused_variable -> UnusedVariable
+function pascalCaseLintCode(code: string): string {
+	return code
 		.split('_')
 		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 		.join('')
@@ -63,9 +63,16 @@ async function startClient(): Promise<void> {
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
 				for (const diagnostic of diagnostics) {
-					const prefix = pascalCaseLintCode(diagnostic.code)
-					if (prefix) {
-						diagnostic.message = `${prefix}: ${diagnostic.message}`
+					const code = rawLintCode(diagnostic.code)
+					if (!code) continue
+
+					diagnostic.message = `${pascalCaseLintCode(code)}: ${diagnostic.message}`
+					// render the code in parens as a link to the rule's doc section
+					diagnostic.code = {
+						value: code,
+						target: vscode.Uri.parse(
+							`${LINT_DOCS_URL}#${code.replaceAll('_', '-')}`,
+						),
 					}
 				}
 				next(uri, diagnostics)
