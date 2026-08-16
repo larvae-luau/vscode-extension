@@ -1,106 +1,113 @@
 {
-  "name": "larvae",
-  "displayName": "Larvae",
-  "description": "Formatting and lint diagnostics for Luau, powered by the larvae toolchain",
-  "version": "0.1.0",
-  "publisher": "AndrewBordis",
-  "license": "MIT",
-  "icon": "assets/larvae.png",
+	"name": "larvae",
+	"displayName": "Larvae",
+	"description": "Formatting and lint diagnostics for Luau, powered by the larvae toolchain",
+	"version": "0.1.1",
+	"publisher": "AndrewBordis",
+	"license": "MIT",
+	"icon": "assets/larvae.png",
 
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/larvae-luau/vscode-extension"
-  },
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/larvae-luau/vscode-extension"
+	},
 
-  "engines": {
-    "vscode": "^1.102.0"
-  },
+	"engines": {
+		"vscode": "^1.102.0"
+	},
 
-  "categories": [
-    "Formatters",
-    "Linters",
-    "Programming Languages"
-  ],
+	"categories": [
+		"Formatters",
+		"Linters",
+		"Programming Languages"
+	],
 
-  "activationEvents": [
-    "onLanguage:lua",
-    "onLanguage:luaux"
-  ],
+	"activationEvents": [
+		"onLanguage:lua",
+		"onLanguage:luaux"
+	],
 
-  "main": "./out/extension.js",
-  "contributes": {
-    "languages": [
-      {
-        "id": "luau",
-        "aliases": [
-          "Luau"
-        ],
-        "extensions": [
-          ".luau"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
+	"main": "./out/extension.js",
+	"contributes": {
+		"languages": [
+			{
+				"id": "luau",
+				"aliases": [
+					"Luau"
+				],
+				"extensions": [
+					".luau"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
 
-    "commands": [
-      {
-        "command": "larvae.restartServer",
-        "title": "Restart Language Server",
-        "category": "Larvae"
-      }
-    ],
+		"commands": [
+			{
+				"command": "larvae.restartServer",
+				"title": "Restart Language Server",
+				"category": "Larvae"
+			}
+		],
 
-    "configuration": {
-      "title": "Larvae",
-      "properties": {
-        "larvae.path": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "Path to the `larvae` executable. Leave empty to use `larvae` from `PATH` (falling back to `~/.larvae/bin/larvae`)."
-        },
+		"configuration": {
+			"title": "Larvae",
+			"properties": {
+				"larvae.path": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "Path to the `larvae` executable. Leave empty to use `larvae` from `PATH` (falling back to `~/.larvae/bin/larvae`)."
+				},
 
-        "larvae.processOnSave": {
-          "type": "boolean",
-          "default": false,
-          "scope": "resource",
-          "markdownDescription": "Run `larvae process` for the containing workspace folder whenever a Luau file is saved. (This is also done in process watch mode)"
-        },
+				"larvae.processOnSave": {
+					"type": "boolean",
+					"default": false,
+					"scope": "resource",
+					"markdownDescription": "Run `larvae process` for the containing workspace folder whenever a Luau file is saved. (This is also done in process watch mode)"
+				},
 
-        "larvae.processProfile": {
-          "type": "string",
-          "default": "",
-          "scope": "resource",
-          "markdownDescription": "Profile to pass to `larvae process --profile <name>`, merging `[profile.<name>]` from `larvae.toml` over the base config. Leave empty to build with the base config only."
-        },
+				"larvae.processProfile": {
+					"type": "string",
+					"default": "",
+					"scope": "resource",
+					"markdownDescription": "Profile to pass to `larvae process --profile <name>`, merging `[profile.<name>]` from `larvae.toml` over the base config. Leave empty to build with the base config only."
+				},
 
-        "larvae.trace.server": {
-          "type": "string",
-          "enum": [
-            "off",
-            "messages",
-            "verbose"
-          ],
-          "default": "off",
-          "description": "Traces the communication between VS Code and the larvae language server."
-        }
-      }
-    }
-  },
+				"larvae.hideOutputFolder": {
+					"type": "boolean",
+					"default": true,
+					"scope": "resource",
+					"markdownDescription": "Hide larvae's output directory (the `output` entry in `larvae.toml`) from the explorer by managing a `files.exclude` entry in the workspace settings. Only applies to folders that contain a `larvae.toml`."
+				},
 
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "test": "npm run compile && npx --yes @vscode/vsce package",
-    "watch": "tsc -watch -p ./"
-  },
+				"larvae.trace.server": {
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "off",
+					"description": "Traces the communication between VS Code and the larvae language server."
+				}
+			}
+		}
+	},
 
-  "dependencies": {
-    "vscode-languageclient": "^9.0.1"
-  },
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"test": "npm run compile && npx --yes @vscode/vsce package",
+		"watch": "tsc -watch -p ./"
+	},
 
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/vscode": "^1.90.0",
-    "typescript": "^5.4.0"
-  }
+	"dependencies": {
+		"vscode-languageclient": "^9.0.1"
+	},
+
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"@types/vscode": "^1.90.0",
+		"typescript": "^5.4.0"
+	}
 }

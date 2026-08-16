@@ -31,6 +31,21 @@ function findServerCommand(): string {
 	return 'larvae'
 }
 
+// unused_variable -> UnusedVariable
+function pascalCaseLintCode(
+	code: vscode.Diagnostic['code'],
+): string | undefined {
+	const raw = typeof code === 'object' ? code.value : code
+	if (typeof raw !== 'string' || raw.length === 0) {
+		return undefined
+	}
+
+	return raw
+		.split('_')
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join('')
+}
+
 async function startClient(): Promise<void> {
 	const command = findServerCommand()
 
@@ -45,6 +60,17 @@ async function startClient(): Promise<void> {
 			{ scheme: 'file', language: 'luaux' },
 			{ scheme: 'file', language: 'lua' },
 		],
+		middleware: {
+			handleDiagnostics(uri, diagnostics, next) {
+				for (const diagnostic of diagnostics) {
+					const prefix = pascalCaseLintCode(diagnostic.code)
+					if (prefix) {
+						diagnostic.message = `${prefix}: ${diagnostic.message}`
+					}
+				}
+				next(uri, diagnostics)
+			},
+		},
 	}
 
 	client = new LanguageClient('larvae', 'Larvae', serverOptions, clientOptions)
@@ -147,6 +173,62 @@ async function processOnSave(document: vscode.TextDocument): Promise<void> {
 	}
 }
 
+// Reads `output = "..."` from larvae.toml; undefined when there is no
+// larvae.toml (i.e. the folder is not a larvae project).
+function readOutputDir(folder: vscode.WorkspaceFolder): string | undefined {
+	let toml: string
+	try {
+		toml = fs.readFileSync(path.join(folder.uri.fsPath, 'larvae.toml'), 'utf8')
+	} catch {
+		return undefined
+	}
+
+	// only look above the first [section] so profile overrides don't match
+	const topLevel = toml.split(/^\s*\[/m, 1)[0]
+	const match = topLevel.match(/^\s*output\s*=\s*"([^"]+)"/m)
+
+	return match ? match[1] : 'dist'
+}
+
+// Hides/unhides the larvae output directory by managing one entry in the
+// workspace's files.exclude, based on the hideOutputFolder setting.
+async function updateOutputFolderVisibility(): Promise<void> {
+	for (const folder of vscode.workspace.workspaceFolders ?? []) {
+		const outputDir = readOutputDir(folder)
+		if (!outputDir) continue
+
+		const hide =
+			vscode.workspace
+				.getConfiguration('larvae', folder.uri)
+				.get<boolean>('hideOutputFolder') ?? true
+
+		const key = outputDir.replace(/^\.?\//, '').replace(/\/+$/, '')
+		if (!key) continue
+
+		const files = vscode.workspace.getConfiguration('files', folder.uri),
+			inspected = files.inspect<Record<string, boolean>>('exclude'),
+			current =
+				inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? {}
+
+		const upToDate = hide ? current[key] === true : !(key in current)
+		if (upToDate) continue
+
+		const next = { ...current }
+		if (hide) next[key] = true
+		else delete next[key]
+
+		try {
+			await files.update(
+				'exclude',
+				next,
+				vscode.ConfigurationTarget.WorkspaceFolder,
+			)
+		} catch {
+			// workspace settings are not writable here; skip quietly
+		}
+	}
+}
+
 async function stopClient(): Promise<void> {
 	if (!client) return
 
@@ -181,8 +263,40 @@ export async function activate(
 				await stopClient()
 				await startClient()
 			}
+
+			if (event.affectsConfiguration('larvae.hideOutputFolder')) {
+				await updateOutputFolderVisibility()
+			}
 		}),
 	)
+
+	// re-check when larvae.toml appears, changes, or goes away, since the
+	// output directory (and larvae-project-ness) comes from it
+	const tomlWatcher = vscode.workspace.createFileSystemWatcher('**/larvae.toml')
+	context.subscriptions.push(tomlWatcher)
+	tomlWatcher.onDidCreate(
+		() => void updateOutputFolderVisibility(),
+		null,
+		context.subscriptions,
+	)
+	tomlWatcher.onDidChange(
+		() => void updateOutputFolderVisibility(),
+		null,
+		context.subscriptions,
+	)
+	tomlWatcher.onDidDelete(
+		() => void updateOutputFolderVisibility(),
+		null,
+		context.subscriptions,
+	)
+
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeWorkspaceFolders(
+			() => void updateOutputFolderVisibility(),
+		),
+	)
+
+	void updateOutputFolderVisibility()
 
 	await startClient()
 }
