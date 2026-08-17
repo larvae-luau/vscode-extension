@@ -12,23 +12,92 @@ import {
 
 let client: LanguageClient | undefined
 
-function findServerCommand(): string {
+function versionOf(command: string): Promise<string | undefined> {
+	return new Promise((resolve) => {
+		execFile(command, ['--version'], { timeout: 5000 }, (error, stdout) => {
+			// output looks like "larvae 0.1.1"
+			resolve(error ? undefined : stdout.trim().split(/\s+/).pop())
+		})
+	})
+}
+
+function compareVersions(a: string, b: string): number {
+	const left = a.split('.').map(Number),
+		right = b.split('.').map(Number)
+
+	for (let i = 0; i < Math.max(left.length, right.length); i++) {
+		const delta = (left[i] ?? 0) - (right[i] ?? 0)
+		if (delta !== 0) return delta
+	}
+
+	return 0
+}
+
+function findOnPath(name: string): string | undefined {
+	for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
+		if (!dir) continue
+
+		const candidate = path.join(dir, name)
+		try {
+			fs.accessSync(candidate, fs.constants.X_OK)
+			return candidate
+		} catch {
+			// not here; keep looking
+		}
+	}
+
+	return undefined
+}
+
+// version of the binary the server was last resolved to, for the restart toast
+let serverVersion: string | undefined
+
+// Resolved fresh on every (re)start so updates are picked up: an explicit
+// larvae.path always wins; otherwise the newest of `larvae self install`'s
+// binary and whatever `larvae` is on PATH.
+async function findServerCommand(): Promise<string> {
+	serverVersion = undefined
+
 	const configured = vscode.workspace
 		.getConfiguration('larvae')
 		.get<string>('path')
 
 	if (configured && configured.trim().length > 0) {
-		return configured.trim()
+		const command = configured.trim()
+		serverVersion = await versionOf(command)
+		return command
 	}
+
+	const candidates: string[] = []
+
 	// `larvae self install` puts the binary here; it may not be on VS Code's
-	// PATH (e.g. when launched from a desktop shell), so fall back to it.
+	// PATH (e.g. when launched from a desktop shell)
 	const installed = path.join(os.homedir(), '.larvae', 'bin', 'larvae')
+	if (fs.existsSync(installed)) candidates.push(installed)
 
-	if (fs.existsSync(installed)) {
-		return installed
+	const onPath = findOnPath(
+		process.platform === 'win32' ? 'larvae.exe' : 'larvae',
+	)
+	if (onPath && !candidates.includes(onPath)) candidates.push(onPath)
+
+	if (candidates.length === 0) return 'larvae'
+
+	let best = candidates[0],
+		bestVersion = await versionOf(best)
+
+	for (const candidate of candidates.slice(1)) {
+		const version = await versionOf(candidate)
+		if (
+			version &&
+			(!bestVersion || compareVersions(version, bestVersion) > 0)
+		) {
+			best = candidate
+			bestVersion = version
+		}
 	}
 
-	return 'larvae'
+	serverVersion = bestVersion
+	return best
 }
 
 const LINT_DOCS_URL = 'https://larvae-luau.github.io/docs/reference/linting'
@@ -47,7 +116,7 @@ function pascalCaseLintCode(code: string): string {
 }
 
 async function startClient(): Promise<void> {
-	const command = findServerCommand()
+	const command = await findServerCommand()
 
 	const serverOptions: ServerOptions = {
 		command,
@@ -200,13 +269,14 @@ let processOutput: vscode.OutputChannel | undefined
 // Saves that land mid-run set `queued` so the folder is rebuilt once more.
 const processRuns = new Map<string, { queued: boolean }>()
 
-function runProcess(
+async function runProcess(
 	folder: vscode.WorkspaceFolder,
 	profile: string,
 ): Promise<void> {
+	const command = await findServerCommand()
+
 	return new Promise((resolve) => {
-		const command = findServerCommand(),
-			args = ['process']
+		const args = ['process']
 		if (profile) args.push('--profile', profile)
 
 		const output = processOutput
@@ -328,6 +398,20 @@ async function updateOutputFolderVisibility(): Promise<void> {
 	}
 }
 
+// The server reads larvae.toml once at startup, so config edits need a
+// restart to apply. Debounced so a burst of file events restarts it once.
+let restartTimer: NodeJS.Timeout | undefined
+
+function scheduleServerRestart(): void {
+	if (restartTimer) clearTimeout(restartTimer)
+
+	restartTimer = setTimeout(async () => {
+		restartTimer = undefined
+		await stopClient()
+		await startClient()
+	}, 300)
+}
+
 async function stopClient(): Promise<void> {
 	if (!client) return
 
@@ -344,6 +428,13 @@ export async function activate(
 		vscode.commands.registerCommand('larvae.restartServer', async () => {
 			await stopClient()
 			await startClient()
+
+			if (client) {
+				const version = serverVersion ? ` (larvae ${serverVersion})` : ''
+				vscode.window.showInformationMessage(
+					`Larvae language server restarted${version}`,
+				)
+			}
 		}),
 	)
 
@@ -380,25 +471,18 @@ export async function activate(
 		}),
 	)
 
-	// re-check when larvae.toml appears, changes, or goes away, since the
-	// output directory (and larvae-project-ness) comes from it
+	// when larvae.toml appears, changes, or goes away: re-check the hidden
+	// output folder and restart the server so the new config applies
 	const tomlWatcher = vscode.workspace.createFileSystemWatcher('**/larvae.toml')
 	context.subscriptions.push(tomlWatcher)
-	tomlWatcher.onDidCreate(
-		() => void updateOutputFolderVisibility(),
-		null,
-		context.subscriptions,
-	)
-	tomlWatcher.onDidChange(
-		() => void updateOutputFolderVisibility(),
-		null,
-		context.subscriptions,
-	)
-	tomlWatcher.onDidDelete(
-		() => void updateOutputFolderVisibility(),
-		null,
-		context.subscriptions,
-	)
+
+	const onTomlEvent = () => {
+		void updateOutputFolderVisibility()
+		scheduleServerRestart()
+	}
+	tomlWatcher.onDidCreate(onTomlEvent, null, context.subscriptions)
+	tomlWatcher.onDidChange(onTomlEvent, null, context.subscriptions)
+	tomlWatcher.onDidDelete(onTomlEvent, null, context.subscriptions)
 
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeWorkspaceFolders(
