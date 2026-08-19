@@ -2,7 +2,7 @@
 	"name": "larvae",
 	"displayName": "Larvae",
 	"description": "Formatting and lint diagnostics for Luau, powered by the larvae toolchain",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"publisher": "AndrewBordis",
 	"license": "MIT",
 	"icon": "assets/larvae.png",
