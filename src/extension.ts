@@ -153,6 +153,7 @@ async function startClient(): Promise<void> {
 
 	try {
 		await client.start()
+		void syncWormDefinitions()
 	} catch {
 		client = undefined
 
@@ -167,6 +168,98 @@ async function startClient(): Promise<void> {
 				'workbench.action.openSettings',
 				'larvae.path',
 			)
+		}
+	}
+}
+
+type WormDefinition = { worm: string; text: string }
+
+// where worm-supplied definition files land, relative to the project root;
+// larvae's init already gitignores .larvae/
+const DEFINITIONS_DIR = path.join('.larvae', 'definitions')
+
+function definitionFileName(worm: string): string {
+	return `${worm.replace(/[^\w.-]/g, '-')}.d.luau`
+}
+
+// Fetches the type definitions the project's worms supply and hands them to
+// luau-lsp: written as .d.luau files and listed in its definitionFiles
+// setting, so the types apply without either extension knowing the other.
+async function syncWormDefinitions(): Promise<void> {
+	if (!client) return
+
+	let definitions: WormDefinition[]
+	try {
+		const reply = await client.sendRequest<{ definitions?: WormDefinition[] }>(
+			'larvae/definitions',
+		)
+		definitions = reply?.definitions ?? []
+	} catch {
+		// an older server has no larvae/definitions; nothing to sync
+		return
+	}
+
+	for (const folder of vscode.workspace.workspaceFolders ?? []) {
+		if (!fs.existsSync(path.join(folder.uri.fsPath, 'larvae.toml'))) continue
+
+		const dir = path.join(folder.uri.fsPath, DEFINITIONS_DIR),
+			wanted = new Map(
+				definitions.map((d) => [definitionFileName(d.worm), d.text]),
+			)
+
+		try {
+			if (wanted.size > 0) fs.mkdirSync(dir, { recursive: true })
+
+			for (const [name, text] of wanted) {
+				const file = path.join(dir, name)
+				let current: string | undefined
+				try {
+					current = fs.readFileSync(file, 'utf8')
+				} catch {
+					// not written yet
+				}
+				if (current !== text) fs.writeFileSync(file, text)
+			}
+
+			// drop files for worms that no longer supply definitions
+			if (fs.existsSync(dir)) {
+				for (const name of fs.readdirSync(dir)) {
+					if (!wanted.has(name)) fs.unlinkSync(path.join(dir, name))
+				}
+			}
+		} catch {
+			// the project dir is not writable; leave luau-lsp untouched
+			continue
+		}
+
+		// maintain our entries in luau-lsp's definition file list, keeping any
+		// the user added themselves
+		const ours = [...wanted.keys()].map((name) =>
+			[DEFINITIONS_DIR, name].join(path.sep),
+		)
+
+		const config = vscode.workspace.getConfiguration('luau-lsp', folder.uri),
+			inspected = config.inspect<string[]>('types.definitionFiles'),
+			current =
+				inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? [],
+			kept = current.filter((entry) => !entry.startsWith(DEFINITIONS_DIR)),
+			next = [...kept, ...ours]
+
+		if (
+			next.length === current.length &&
+			next.every((entry, i) => entry === current[i])
+		) {
+			continue
+		}
+
+		try {
+			await config.update(
+				'types.definitionFiles',
+				next.length > 0 ? next : undefined,
+				vscode.ConfigurationTarget.WorkspaceFolder,
+			)
+		} catch {
+			// workspace settings are not writable here; skip quietly
 		}
 	}
 }
