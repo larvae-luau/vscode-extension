@@ -49,6 +49,10 @@ Set larvae as the default formatter for Luau and enable format-on-save in your `
 | `larvae-lsp.inlayHints.variableTypes` | `false` | Show inferred types on unannotated locals. Project side: `[lsp.inlay_hints] variable_types`. |
 | `larvae-lsp.inlayHints.parameterTypes` | `false` | Show inferred types on unannotated parameters. Project side: `[lsp.inlay_hints] parameter_types`. |
 | `larvae-lsp.inlayHints.typeHintMaxLength` | `50` | Cut longer inlay type hints. Project side: `[lsp.inlay_hints] type_hint_max_length`. |
+| `larvae-lsp.fflags.enableByDefault` | `false` | Enable all boolean Luau FFlags by default. Project side: `[lsp.fflags] enable_by_default`. |
+| `larvae-lsp.fflags.enableNewSolver` | `false` | Enable the flags Luau's new type solver needs. Project side: `[lsp.fflags] enable_new_solver`. |
+| `larvae-lsp.fflags.override` | `{}` | FFlags passed to the Luau analyzer by name; wins per flag. Project side: `[lsp.fflags] override`. |
+| `larvae-lsp.bytecode.*` | | `debugLevel` (1), `typeInfoLevel` (1), `vectorLib` (`Vector3`), `vectorCtor` (`new`), `vectorType` (`Vector3`), used when compiling bytecode. Project side: `[lsp.bytecode]`. |
 | `larvae-lsp.index.enabled` | `true` | Keep the project-wide symbol index behind workspace symbol search. Project side: `[lsp.index] enabled`. |
 | `larvae.trace.server` | `off` | Log LSP traffic to the Larvae output channel (`messages` or `verbose`). |
 

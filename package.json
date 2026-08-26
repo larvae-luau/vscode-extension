@@ -33,7 +33,11 @@
 				"extensions": [
 					".luau"
 				],
-				"configuration": "./language-configuration.json"
+				"configuration": "./language-configuration.json",
+				"icon": {
+					"light": "./assets/luau-file-icon-light.svg",
+					"dark": "./assets/luau-file-icon-dark.svg"
+				}
 			}
 		],
 		"commands": [
@@ -135,6 +139,61 @@
 					"minimum": 10,
 					"scope": "window",
 					"markdownDescription": "Cut an inlay type hint longer than this. Project side: `[lsp.inlay_hints] type_hint_max_length`."
+				},
+				"larvae-lsp.fflags.enableByDefault": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Enable all boolean Luau FFlags by default; `#larvae-lsp.fflags.override#` still wins per flag. Project side: `[lsp.fflags] enable_by_default`."
+				},
+				"larvae-lsp.fflags.enableNewSolver": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Enable the flags Luau's new type solver needs; `#larvae-lsp.fflags.override#` still wins per flag. Project side: `[lsp.fflags] enable_new_solver`."
+				},
+				"larvae-lsp.fflags.override": {
+					"type": "object",
+					"default": {},
+					"scope": "window",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"markdownDescription": "FFlags passed to the Luau analyzer, by name, e.g. `{ \"LuauSolverV2\": \"true\" }`. Wins over every other fflags setting. Project side: `[lsp.fflags] override`."
+				},
+				"larvae-lsp.bytecode.debugLevel": {
+					"type": "number",
+					"default": 1,
+					"minimum": 0,
+					"maximum": 2,
+					"scope": "window",
+					"markdownDescription": "The `debugLevel` used when compiling bytecode. Project side: `[lsp.bytecode] debug_level`."
+				},
+				"larvae-lsp.bytecode.typeInfoLevel": {
+					"type": "number",
+					"default": 1,
+					"minimum": 0,
+					"maximum": 1,
+					"scope": "window",
+					"markdownDescription": "The `typeInfoLevel` used when compiling bytecode. Project side: `[lsp.bytecode] type_info_level`."
+				},
+				"larvae-lsp.bytecode.vectorLib": {
+					"type": "string",
+					"default": "Vector3",
+					"scope": "window",
+					"markdownDescription": "The `vectorLib` used when compiling bytecode. Project side: `[lsp.bytecode] vector_lib`."
+				},
+				"larvae-lsp.bytecode.vectorCtor": {
+					"type": "string",
+					"default": "new",
+					"scope": "window",
+					"markdownDescription": "The `vectorCtor` used when compiling bytecode. Project side: `[lsp.bytecode] vector_ctor`."
+				},
+				"larvae-lsp.bytecode.vectorType": {
+					"type": "string",
+					"default": "Vector3",
+					"scope": "window",
+					"markdownDescription": "The `vectorType` used when compiling bytecode. Project side: `[lsp.bytecode] vector_type`."
 				},
 				"larvae-lsp.index.enabled": {
 					"type": "boolean",
