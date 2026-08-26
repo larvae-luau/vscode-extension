@@ -53,6 +53,8 @@ Set larvae as the default formatter for Luau and enable format-on-save in your `
 | `larvae-lsp.fflags.enableNewSolver` | `false` | Enable the flags Luau's new type solver needs. Project side: `[lsp.fflags] enable_new_solver`. |
 | `larvae-lsp.fflags.override` | `{}` | FFlags passed to the Luau analyzer by name; wins per flag. Project side: `[lsp.fflags] override`. |
 | `larvae-lsp.bytecode.*` | | `debugLevel` (1), `typeInfoLevel` (1), `vectorLib` (`Vector3`), `vectorCtor` (`new`), `vectorType` (`Vector3`), used when compiling bytecode. Project side: `[lsp.bytecode]`. |
+| `larvae-lsp.studio.enabled` | `false` | Open the loopback socket the Roblox Studio plugin posts the live DataModel to. Project side: `[lsp.studio] enabled`. |
+| `larvae-lsp.studio.port` | `3773` | The port the Studio plugin posts to. Project side: `[lsp.studio] port`. |
 | `larvae-lsp.index.enabled` | `true` | Keep the project-wide symbol index behind workspace symbol search. Project side: `[lsp.index] enabled`. |
 | `larvae.trace.server` | `off` | Log LSP traffic to the Larvae output channel (`messages` or `verbose`). |
 

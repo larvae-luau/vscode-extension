@@ -195,6 +195,20 @@
 					"scope": "window",
 					"markdownDescription": "The `vectorType` used when compiling bytecode. Project side: `[lsp.bytecode] vector_type`."
 				},
+				"larvae-lsp.studio.enabled": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Open the loopback socket the Roblox Studio plugin posts the live DataModel to, so the type checker sees the instances the place actually holds. Off by default because it opens a listening socket. Project side: `[lsp.studio] enabled`."
+				},
+				"larvae-lsp.studio.port": {
+					"type": "number",
+					"default": 3773,
+					"minimum": 1,
+					"maximum": 65535,
+					"scope": "window",
+					"markdownDescription": "The port the Studio plugin posts to; the plugin ships with the same number. Project side: `[lsp.studio] port`."
+				},
 				"larvae-lsp.index.enabled": {
 					"type": "boolean",
 					"default": true,

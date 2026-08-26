@@ -233,10 +233,10 @@ async function startClient(): Promise<void> {
 						diagnostic.source = 'Luau'
 
 						const raw =
-							typeof diagnostic.code === 'object'
+							diagnostic.code !== null && typeof diagnostic.code === 'object'
 								? diagnostic.code.value
 								: diagnostic.code
-						if (raw !== undefined && raw !== '') {
+						if (raw !== undefined && raw !== null && raw !== '') {
 							diagnostic.code = {
 								value: raw,
 								target: vscode.Uri.parse('https://luau.org/types'),
