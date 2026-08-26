@@ -227,6 +227,26 @@ async function startClient(): Promise<void> {
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
 				for (const diagnostic of diagnostics) {
+					// analyzer findings render the way luau-lsp renders its own:
+					// source Luau, the error number in parens linking to luau.org
+					if (diagnostic.source === 'larvae-types') {
+						diagnostic.source = 'Luau'
+
+						const raw =
+							typeof diagnostic.code === 'object'
+								? diagnostic.code.value
+								: diagnostic.code
+						if (raw !== undefined && raw !== '') {
+							diagnostic.code = {
+								value: raw,
+								target: vscode.Uri.parse('https://luau.org/types'),
+							}
+						}
+						continue
+					}
+
+					if (diagnostic.source !== 'larvae') continue
+
 					const code = rawLintCode(diagnostic.code)
 					if (!code) continue
 
