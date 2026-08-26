@@ -77,7 +77,7 @@
 				},
 				"larvae-lsp.claimOnly": {
 					"type": "boolean",
-					"default": false,
+					"default": true,
 					"scope": "window",
 					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},

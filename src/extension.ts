@@ -156,7 +156,7 @@ function includePlainLuau(): boolean {
 
 	const claimOnly =
 		vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('claimOnly') ??
-		false
+		true
 	return !claimOnly
 }
 

@@ -35,7 +35,7 @@ Set larvae as the default formatter for Luau and enable format-on-save in your `
 | `larvae.processProfile` | `""` | Profile passed as `larvae process --profile <name>`, merging `[profile.<name>]` from `larvae.toml` over the base config. Empty builds with the base config. |
 | `larvae.hideOutputFolder` | `true` | Hide larvae's output directory (`output` in `larvae.toml`) from the explorer via a `files.exclude` entry. The entry is written once per folder; deleting it by hand sticks, and toggling the setting off and on writes it again. Only touches folders containing a `larvae.toml`. |
 | `larvae-lsp.enabled` | `true` | Start the language server at all. Project side: `[lsp] enabled`. |
-| `larvae-lsp.claimOnly` | `false` | Serve only worm-claimed files (e.g. `.luaux`), leaving plain Luau to luau-lsp. Project side: `[lsp] claim_only`. |
+| `larvae-lsp.claimOnly` | `true` | Serve only worm-claimed files (e.g. `.luaux`), leaving plain Luau to luau-lsp. Project side: `[lsp] claim_only`. |
 | `larvae-lsp.completion.imports.useConst` | `true` | Auto-imports bind with `const` instead of `local`. Project side: `[lsp.completion.imports] use_const`. |
 | `larvae.trace.server` | `off` | Log LSP traffic to the Larvae output channel (`messages` or `verbose`). |
 
@@ -45,8 +45,8 @@ The `larvae-lsp.*` ids mirror the `[lsp]` table in `larvae.toml`: the editor set
 
 larvae can replace luau-lsp or run beside it; the difference is which files the server attaches to:
 
-- **Drop-in (default)** — larvae serves plain Luau and Lua files as well as worm-claimed ones.
-- **Side by side** — set `larvae-lsp.claimOnly`, or `claim_only = true` under `[lsp]` in `larvae.toml` to fix it for every contributor. larvae then only serves worm-claimed files (e.g. `.luaux`), and luau-lsp keeps normal Luau to itself.
+- **Side by side (default)** — larvae only serves worm-claimed files (e.g. `.luaux`), and luau-lsp keeps normal Luau to itself.
+- **Drop-in** — turn `larvae-lsp.claimOnly` off and larvae serves plain Luau and Lua files as well. A project can fix either mode for every contributor with `claim_only` under `[lsp]` in `larvae.toml`; the project file wins over the editor setting.
 
 ## Commands
 
