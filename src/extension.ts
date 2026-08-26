@@ -115,6 +115,47 @@ function pascalCaseLintCode(code: string): string {
 		.join('')
 }
 
+// Reads `worm_files_only` from the [lint] section of a folder's larvae.toml.
+function readWormFilesOnly(folder: vscode.WorkspaceFolder): boolean {
+	let toml: string
+	try {
+		toml = fs.readFileSync(path.join(folder.uri.fsPath, 'larvae.toml'), 'utf8')
+	} catch {
+		return false
+	}
+
+	let inLint = false
+	for (const line of toml.split('\n')) {
+		const header = line.match(/^\s*\[(.+?)\]/)
+		if (header) {
+			inLint = header[1].trim() === 'lint'
+			continue
+		}
+		if (inLint && /^\s*worm_files_only\s*=\s*true\b/.test(line)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Whether the server gets plain Luau files, or only worm-claimed ones.
+// Both the luauFiles setting and larvae.toml can turn plain Luau off; the
+// project file wins so a checkout behaves the same for the whole team. With
+// plain Luau off, larvae runs beside luau-lsp instead of replacing it.
+function includePlainLuau(): boolean {
+	const setting =
+		vscode.workspace.getConfiguration('larvae').get<boolean>('luauFiles') ??
+		true
+	if (!setting) return false
+
+	for (const folder of vscode.workspace.workspaceFolders ?? []) {
+		if (readWormFilesOnly(folder)) return false
+	}
+
+	return true
+}
+
 async function startClient(): Promise<void> {
 	const command = await findServerCommand()
 
@@ -123,12 +164,16 @@ async function startClient(): Promise<void> {
 		args: ['lsp'],
 	}
 
-	const clientOptions: LanguageClientOptions = {
-		documentSelector: [
+	const documentSelector = [{ scheme: 'file', language: 'luaux' }]
+	if (includePlainLuau()) {
+		documentSelector.push(
 			{ scheme: 'file', language: 'luau' },
-			{ scheme: 'file', language: 'luaux' },
 			{ scheme: 'file', language: 'lua' },
-		],
+		)
+	}
+
+	const clientOptions: LanguageClientOptions = {
+		documentSelector,
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
 				for (const diagnostic of diagnostics) {
@@ -587,7 +632,10 @@ export async function activate(
 
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeConfiguration(async (event) => {
-			if (event.affectsConfiguration('larvae.path')) {
+			if (
+				event.affectsConfiguration('larvae.path') ||
+				event.affectsConfiguration('larvae.luauFiles')
+			) {
 				await stopClient()
 				await startClient()
 			}

@@ -69,6 +69,12 @@
 					"scope": "resource",
 					"markdownDescription": "Hide larvae's output directory (the `output` entry in `larvae.toml`) from the explorer by managing a `files.exclude` entry in the workspace settings. Only applies to folders that contain a `larvae.toml`."
 				},
+				"larvae.luauFiles": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Attach the language server to plain Luau and Lua files. When off — or when a workspace's `larvae.toml` sets `worm_files_only = true` under `[lint]` — larvae only serves worm-claimed files (e.g. `.luaux`), so luau-lsp can own normal Luau and the two run side by side."
+				},
 				"larvae.trace.server": {
 					"type": "string",
 					"enum": [
