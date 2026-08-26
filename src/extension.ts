@@ -115,48 +115,55 @@ function pascalCaseLintCode(code: string): string {
 		.join('')
 }
 
-// Reads `worm_files_only` from the [lint] section of a folder's larvae.toml.
-function readWormFilesOnly(folder: vscode.WorkspaceFolder): boolean {
+// Reads `claim_only` from the [lsp] section of a folder's larvae.toml.
+// Undefined when the project does not speak.
+function readClaimOnly(folder: vscode.WorkspaceFolder): boolean | undefined {
 	let toml: string
 	try {
 		toml = fs.readFileSync(path.join(folder.uri.fsPath, 'larvae.toml'), 'utf8')
 	} catch {
-		return false
+		return undefined
 	}
 
-	let inLint = false
+	let inLsp = false
 	for (const line of toml.split('\n')) {
 		const header = line.match(/^\s*\[(.+?)\]/)
 		if (header) {
-			inLint = header[1].trim() === 'lint'
+			inLsp = header[1].trim() === 'lsp'
 			continue
 		}
-		if (inLint && /^\s*worm_files_only\s*=\s*true\b/.test(line)) {
-			return true
-		}
+		if (!inLsp) continue
+
+		const value = line.match(/^\s*claim_only\s*=\s*(true|false)\b/)
+		if (value) return value[1] === 'true'
 	}
 
-	return false
+	return undefined
 }
 
-// Whether the server gets plain Luau files, or only worm-claimed ones.
-// Both the luauFiles setting and larvae.toml can turn plain Luau off; the
-// project file wins so a checkout behaves the same for the whole team. With
-// plain Luau off, larvae runs beside luau-lsp instead of replacing it.
+// Whether the server gets plain Luau files, or only worm-claimed ones. The
+// project speaks through [lsp] claim_only and wins over the claimOnly editor
+// setting, so a checkout behaves the same for the whole team. In claim-only
+// mode larvae runs beside luau-lsp instead of replacing it.
 function includePlainLuau(): boolean {
-	const setting =
-		vscode.workspace.getConfiguration('larvae').get<boolean>('luauFiles') ??
-		false
-	if (!setting) return false
-
+	let projectSaysServeAll = false
 	for (const folder of vscode.workspace.workspaceFolders ?? []) {
-		if (readWormFilesOnly(folder)) return false
+		const spoken = readClaimOnly(folder)
+		if (spoken === true) return false
+		if (spoken === false) projectSaysServeAll = true
 	}
+	if (projectSaysServeAll) return true
 
-	return true
+	const claimOnly =
+		vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('claimOnly') ??
+		false
+	return !claimOnly
 }
 
 async function startClient(): Promise<void> {
+	const lspSettings = vscode.workspace.getConfiguration('larvae-lsp')
+	if (!(lspSettings.get<boolean>('enabled') ?? true)) return
+
 	const command = await findServerCommand()
 
 	const serverOptions: ServerOptions = {
@@ -174,15 +181,15 @@ async function startClient(): Promise<void> {
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector,
-		// the full larvae section travels at initialize, changes are pushed as
-		// didChangeConfiguration, and workspace/configuration pulls also answer
+		// editor-side settings travel at initialize and on change; the server
+		// treats larvae.toml as the project side and wins where both speak
 		initializationOptions: {
-			settings: JSON.parse(
-				JSON.stringify(vscode.workspace.getConfiguration('larvae')),
-			),
+			settings: {
+				'larvae-lsp': JSON.parse(JSON.stringify(lspSettings)),
+			},
 		},
 		synchronize: {
-			configurationSection: 'larvae',
+			configurationSection: 'larvae-lsp',
 		},
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
@@ -644,7 +651,8 @@ export async function activate(
 		vscode.workspace.onDidChangeConfiguration(async (event) => {
 			if (
 				event.affectsConfiguration('larvae.path') ||
-				event.affectsConfiguration('larvae.luauFiles')
+				event.affectsConfiguration('larvae-lsp.enabled') ||
+				event.affectsConfiguration('larvae-lsp.claimOnly')
 			) {
 				await stopClient()
 				await startClient()
