@@ -13,6 +13,8 @@ The extension launches `larvae lsp` and talks to it over stdio:
 
 The `larvae` binary must be installed (`larvae self install` puts it in `~/.larvae/bin`, which the extension finds automatically). If it lives somewhere else, point `larvae.path` at it.
 
+Hover, completions, and type diagnostics come from the `larvae-lsp` binary, which carries the Luau analyzer. When it sits beside the `larvae` binary (or on `PATH`), the extension launches it instead of `larvae lsp`; without it, lint diagnostics and formatting still work through `larvae lsp` alone.
+
 ## Format on save
 
 Set larvae as the default formatter for Luau and enable format-on-save in your `settings.json`:

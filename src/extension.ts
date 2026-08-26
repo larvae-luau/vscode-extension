@@ -100,6 +100,39 @@ async function findServerCommand(): Promise<string> {
 	return best
 }
 
+type ServerLaunch = { command: string; args: string[] }
+
+// The larvae-lsp binary carries the Luau analyzer (hover, completions, type
+// diagnostics); `larvae lsp` serves lint and format alone. Prefer the
+// dedicated binary beside the resolved CLI, and fall back to the subcommand.
+// An explicit larvae.path is respected exactly.
+async function findServerLaunch(): Promise<ServerLaunch> {
+	const configured = vscode.workspace
+		.getConfiguration('larvae')
+		.get<string>('path')
+		?.trim()
+
+	const command = await findServerCommand()
+
+	if (configured) {
+		const args = path.basename(command).startsWith('larvae-lsp') ? [] : ['lsp']
+		return { command, args }
+	}
+
+	const dedicated =
+		process.platform === 'win32' ? 'larvae-lsp.exe' : 'larvae-lsp'
+
+	if (path.isAbsolute(command)) {
+		const sibling = path.join(path.dirname(command), dedicated)
+		if (fs.existsSync(sibling)) return { command: sibling, args: [] }
+	} else {
+		const onPath = findOnPath(dedicated)
+		if (onPath) return { command: onPath, args: [] }
+	}
+
+	return { command, args: ['lsp'] }
+}
+
 const LINT_DOCS_URL = 'https://larvae-luau.github.io/docs/reference/linting'
 
 function rawLintCode(code: vscode.Diagnostic['code']): string | undefined {
@@ -164,11 +197,11 @@ async function startClient(): Promise<void> {
 	const lspSettings = vscode.workspace.getConfiguration('larvae-lsp')
 	if (!(lspSettings.get<boolean>('enabled') ?? true)) return
 
-	const command = await findServerCommand()
+	const { command, args } = await findServerLaunch()
 
 	const serverOptions: ServerOptions = {
 		command,
-		args: ['lsp'],
+		args,
 	}
 
 	const documentSelector = [{ scheme: 'file', language: 'luaux' }]
@@ -220,7 +253,7 @@ async function startClient(): Promise<void> {
 		client = undefined
 
 		const choice = await vscode.window.showErrorMessage(
-			`Failed to start the larvae language server ("${command} lsp"). ` +
+			`Failed to start the larvae language server ("${[command, ...args].join(' ')}"). ` +
 				'Is larvae installed and on your PATH?',
 			'Open Settings',
 		)
