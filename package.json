@@ -71,9 +71,114 @@
 				},
 				"larvae.luauFiles": {
 					"type": "boolean",
-					"default": true,
+					"default": false,
 					"scope": "window",
-					"markdownDescription": "Attach the language server to plain Luau and Lua files. When off — or when a workspace's `larvae.toml` sets `worm_files_only = true` under `[lint]` — larvae only serves worm-claimed files (e.g. `.luaux`), so luau-lsp can own normal Luau and the two run side by side."
+					"markdownDescription": "Attach the language server to plain Luau and Lua files, making larvae a drop-in for luau-lsp. Off (the default), larvae only serves worm-claimed files (e.g. `.luaux`) and runs side by side with luau-lsp. A workspace's `larvae.toml` can force side-by-side with `worm_files_only = true` under `[lint]`."
+				},
+				"larvae.completion.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Provide autocomplete suggestions."
+				},
+				"larvae.completion.autocompleteEnd": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "Insert the closing `end` when completing a block."
+				},
+				"larvae.completion.addParentheses": {
+					"type": "boolean",
+					"default": true,
+					"description": "Add parentheses when completing a function."
+				},
+				"larvae.completion.fillCallArguments": {
+					"type": "boolean",
+					"default": true,
+					"description": "Fill parameter names as placeholders when completing a call."
+				},
+				"larvae.completion.imports.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Suggest symbols from modules that are not required yet and insert the require on accept (auto-imports)."
+				},
+				"larvae.completion.imports.keyword": {
+					"type": "string",
+					"enum": [
+						"local",
+						"const"
+					],
+					"default": "local",
+					"markdownDescription": "The keyword an inserted require binds with. `const` applies in files whose worm supports it."
+				},
+				"larvae.completion.imports.requireStyle": {
+					"type": "string",
+					"enum": [
+						"auto",
+						"relative",
+						"aliased"
+					],
+					"default": "auto",
+					"markdownDescription": "How an inserted require spells its path: `auto` follows the project's target and existing requires, `relative` always writes `./`-style paths, `aliased` always writes alias paths (e.g. `@game/...`)."
+				},
+				"larvae.completion.imports.separateGroups": {
+					"type": "boolean",
+					"default": true,
+					"description": "Keep inserted requires grouped: services first, then aliased requires, then relative ones."
+				},
+				"larvae.hover.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show type information and documentation on hover."
+				},
+				"larvae.hover.multilineFunctionDefinitions": {
+					"type": "boolean",
+					"default": false,
+					"description": "Wrap function signatures in hovers across multiple lines."
+				},
+				"larvae.inlayHints.parameterNames": {
+					"type": "string",
+					"enum": [
+						"none",
+						"literals",
+						"all"
+					],
+					"default": "none",
+					"description": "Show parameter name hints in call arguments."
+				},
+				"larvae.inlayHints.parameterTypes": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show type hints on parameters without an annotation."
+				},
+				"larvae.inlayHints.variableTypes": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show type hints on variables without an annotation."
+				},
+				"larvae.inlayHints.functionReturnTypes": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show return type hints on functions without an annotation."
+				},
+				"larvae.inlayHints.typeHintMaxLength": {
+					"type": "number",
+					"default": 50,
+					"minimum": 10,
+					"description": "Truncate inlay type hints longer than this."
+				},
+				"larvae.signatureHelp.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show signature help while typing call arguments."
+				},
+				"larvae.diagnostics.workspace": {
+					"type": "boolean",
+					"default": false,
+					"description": "Lint the whole workspace, not only open files."
+				},
+				"larvae.diagnostics.includeDependents": {
+					"type": "boolean",
+					"default": true,
+					"description": "Re-check files that depend on an edited file."
 				},
 				"larvae.trace.server": {
 					"type": "string",

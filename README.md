@@ -34,15 +34,17 @@ Set larvae as the default formatter for Luau and enable format-on-save in your `
 | `larvae.processOnSave` | `false` | Run `larvae process` for the containing workspace folder whenever a Luau file is saved. Output lands in the *Larvae Process* output channel. |
 | `larvae.processProfile` | `""` | Profile passed as `larvae process --profile <name>`, merging `[profile.<name>]` from `larvae.toml` over the base config. Empty builds with the base config. |
 | `larvae.hideOutputFolder` | `true` | Hide larvae's output directory (`output` in `larvae.toml`) from the explorer via a `files.exclude` entry. The entry is written once per folder; deleting it by hand sticks, and toggling the setting off and on writes it again. Only touches folders containing a `larvae.toml`. |
-| `larvae.luauFiles` | `true` | Attach the language server to plain Luau/Lua files. Off, larvae only serves worm-claimed files (e.g. `.luaux`). |
+| `larvae.luauFiles` | `false` | Attach the language server to plain Luau/Lua files (drop-in mode). Off, larvae only serves worm-claimed files (e.g. `.luaux`). |
 | `larvae.trace.server` | `off` | Log LSP traffic to the Larvae output channel (`messages` or `verbose`). |
+
+The language server also reads the `larvae.completion.*` (including auto-imports), `larvae.hover.*`, `larvae.inlayHints.*`, `larvae.signatureHelp.*`, and `larvae.diagnostics.*` settings — see the Settings UI for the full list. They travel to the server at startup and on every change.
 
 ## Working alongside luau-lsp
 
-larvae can replace luau-lsp or run beside it; the difference is which files the server attaches to:
+larvae can run beside luau-lsp or replace it; the difference is which files the server attaches to:
 
-- **Drop-in (default)** — larvae serves plain Luau and Lua files as well as worm-claimed ones.
-- **Side by side** — turn `larvae.luauFiles` off, or set `worm_files_only = true` under `[lint]` in `larvae.toml`. larvae then only serves worm-claimed files (e.g. `.luaux`), and luau-lsp keeps normal Luau to itself. The project file wins over the editor setting, so a checkout behaves the same for everyone.
+- **Side by side (default)** — larvae only serves worm-claimed files (e.g. `.luaux`), and luau-lsp keeps normal Luau to itself.
+- **Drop-in** — turn `larvae.luauFiles` on and larvae serves plain Luau and Lua files as well. A project can force side-by-side for every contributor with `worm_files_only = true` under `[lint]` in `larvae.toml`; the project file wins over the editor setting.
 
 ## Commands
 

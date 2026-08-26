@@ -146,7 +146,7 @@ function readWormFilesOnly(folder: vscode.WorkspaceFolder): boolean {
 function includePlainLuau(): boolean {
 	const setting =
 		vscode.workspace.getConfiguration('larvae').get<boolean>('luauFiles') ??
-		true
+		false
 	if (!setting) return false
 
 	for (const folder of vscode.workspace.workspaceFolders ?? []) {
@@ -174,6 +174,16 @@ async function startClient(): Promise<void> {
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector,
+		// the full larvae section travels at initialize, changes are pushed as
+		// didChangeConfiguration, and workspace/configuration pulls also answer
+		initializationOptions: {
+			settings: JSON.parse(
+				JSON.stringify(vscode.workspace.getConfiguration('larvae')),
+			),
+		},
+		synchronize: {
+			configurationSection: 'larvae',
+		},
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
 				for (const diagnostic of diagnostics) {
