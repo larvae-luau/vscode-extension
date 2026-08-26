@@ -81,11 +81,66 @@
 					"scope": "window",
 					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
+				"larvae-lsp.completion.enabled": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Provide completion. Off answers every request with an empty list. Project side: `[lsp.completion] enabled`."
+				},
+				"larvae-lsp.completion.showKeywords": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Offer the keywords that fit the position, beside the names. Project side: `[lsp.completion] show_keywords`."
+				},
+				"larvae-lsp.completion.imports.enabled": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Offer a service or module the file has not imported yet, and insert the import on accept. Project side: `[lsp.completion.imports] enabled`."
+				},
 				"larvae-lsp.completion.imports.useConst": {
 					"type": "boolean",
 					"default": true,
 					"scope": "window",
 					"markdownDescription": "An auto-import binds with `const` instead of `local`. Project side: `use_const` under `[lsp.completion.imports]` in `larvae.toml`; where both speak, the project wins."
+				},
+				"larvae-lsp.hover.enabled": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Show type information on hover. Project side: `[lsp.hover] enabled`."
+				},
+				"larvae-lsp.signatureHelp.enabled": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Show the call signature while typing arguments. Project side: `[lsp.signature_help] enabled`."
+				},
+				"larvae-lsp.inlayHints.variableTypes": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Show the inferred type of a local the author left unannotated. Project side: `[lsp.inlay_hints] variable_types`."
+				},
+				"larvae-lsp.inlayHints.parameterTypes": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Show the inferred type of a parameter the author left unannotated. Project side: `[lsp.inlay_hints] parameter_types`."
+				},
+				"larvae-lsp.inlayHints.typeHintMaxLength": {
+					"type": "number",
+					"default": 50,
+					"minimum": 10,
+					"scope": "window",
+					"markdownDescription": "Cut an inlay type hint longer than this. Project side: `[lsp.inlay_hints] type_hint_max_length`."
+				},
+				"larvae-lsp.index.enabled": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Keep the project-wide symbol index that workspace symbol search reads. Off keeps document symbols for the open file only. Project side: `[lsp.index] enabled`."
 				},
 				"larvae.trace.server": {
 					"type": "string",
