@@ -187,9 +187,11 @@ function includePlainLuau(): boolean {
 	}
 	if (projectSaysServeAll) return true
 
+	// the server's own default is claim_only = false, and the extension
+	// always sends its declared value, so the two agree
 	const claimOnly =
 		vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('claimOnly') ??
-		true
+		false
 	return !claimOnly
 }
 

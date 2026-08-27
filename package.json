@@ -108,9 +108,9 @@
 				},
 				"larvae-lsp.claimOnly": {
 					"type": "boolean",
-					"default": true,
+					"default": false,
 					"scope": "window",
-					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
+					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Turn it on when stock luau-lsp already runs here. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
 				"larvae-lsp.sourcemap": {
 					"type": "string",
