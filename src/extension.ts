@@ -193,6 +193,22 @@ function includePlainLuau(): boolean {
 	return !claimOnly
 }
 
+/*
+The `larvae-lsp` settings, whole, for the initialize handshake.
+
+The client sends `{ settings: { "larvae-lsp": ... } }` on every settings
+change, and this is the lookup that notification makes. Initialize sends the
+same blob from the same place, so the server reads one shape and a fresh
+session starts on the values the user already has.
+*/
+function editorSettings(): Record<string, unknown> {
+	return (
+		vscode.workspace
+			.getConfiguration()
+			.get<Record<string, unknown>>('larvae-lsp') ?? {}
+	)
+}
+
 async function startClient(): Promise<void> {
 	const lspSettings = vscode.workspace.getConfiguration('larvae-lsp')
 	if (!(lspSettings.get<boolean>('enabled') ?? true)) return
@@ -218,7 +234,7 @@ async function startClient(): Promise<void> {
 		// treats larvae.toml as the project side and wins where both speak
 		initializationOptions: {
 			settings: {
-				'larvae-lsp': JSON.parse(JSON.stringify(lspSettings)),
+				'larvae-lsp': editorSettings(),
 			},
 		},
 		synchronize: {
