@@ -20,7 +20,8 @@
 	],
 	"activationEvents": [
 		"onLanguage:lua",
-		"onLanguage:luaux"
+		"onLanguage:luau",
+		"workspaceContains:**/larvae.toml"
 	],
 	"main": "./out/extension.js",
 	"contributes": {

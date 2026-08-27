@@ -209,6 +209,117 @@ function editorSettings(): Record<string, unknown> {
 	)
 }
 
+type Claims = { claims?: string[] }
+
+// The extensions the project's worms claim, without the dot. Refreshed
+// whenever the client starts, which is also whenever larvae.toml changes.
+let claimed: string[] = []
+
+// The CLI, which answers `worm claims`. An explicit larvae.path may name the
+// server binary instead, and that one has no subcommands, so the sibling CLI
+// beside it answers for it.
+async function findCliCommand(): Promise<string> {
+	const command = await findServerCommand()
+
+	if (!path.basename(command).startsWith('larvae-lsp')) return command
+
+	const cli = process.platform === 'win32' ? 'larvae.exe' : 'larvae'
+
+	if (path.isAbsolute(command)) {
+		const sibling = path.join(path.dirname(command), cli)
+		if (fs.existsSync(sibling)) return sibling
+	}
+
+	return findOnPath(cli) ?? cli
+}
+
+/*
+The file extensions the project's worms claim, e.g. [".luaux"].
+
+larvae answers from the manifests it installed, so no worm is named here and
+a worm that claims a new extension needs no release of this extension.
+
+`undefined` is a larvae that could not answer: too old for the subcommand,
+or not runnable. That is not the same as a project with no worms, and the
+caller keeps the client running rather than concluding there is nothing to
+serve.
+*/
+function readClaims(
+	folder: vscode.WorkspaceFolder,
+): Promise<string[] | undefined> {
+	return new Promise((resolve) => {
+		void findCliCommand().then((command) => {
+			execFile(
+				command,
+				['worm', 'claims'],
+				{ cwd: folder.uri.fsPath, timeout: 10000 },
+				(error, stdout) => {
+					if (error) return resolve(undefined)
+
+					try {
+						const reply = JSON.parse(stdout) as Claims
+						resolve(reply.claims ?? [])
+					} catch {
+						resolve(undefined)
+					}
+				},
+			)
+		})
+	})
+}
+
+// The files larvae serves, as a language client selector.
+//
+// A claimed file is matched by its path and not by its language id, because
+// the id belongs to whichever extension registered the language and larvae
+// registers none: a worm's language is the worm's to ship. Plain Luau is
+// matched by id, since larvae contributes that one itself.
+async function documentSelectorFor(): Promise<
+	{ scheme: string; language?: string; pattern?: string }[]
+> {
+	const found = new Set<string>()
+	let answered = true
+
+	for (const folder of vscode.workspace.workspaceFolders ?? []) {
+		const extensions = await readClaims(folder)
+
+		if (extensions === undefined) {
+			answered = false
+			continue
+		}
+
+		for (const extension of extensions) {
+			// `.luaux` and `luaux` both reach here from a manifest
+			found.add(extension.replace(/^\./, ''))
+		}
+	}
+
+	claimed = [...found]
+
+	const selector = claimed.map((extension) => ({
+		scheme: 'file',
+		pattern: `**/*.${extension}`,
+	}))
+
+	if (includePlainLuau()) {
+		selector.push(
+			{ scheme: 'file', language: 'luau' } as never,
+			{ scheme: 'file', language: 'lua' } as never,
+		)
+	}
+
+	// larvae could not say what it claims, so serve Luau and let the server
+	// decline what is not its own. Silence is not an empty project.
+	if (selector.length === 0 && !answered) {
+		return [
+			{ scheme: 'file', language: 'luau' },
+			{ scheme: 'file', language: 'lua' },
+		]
+	}
+
+	return selector
+}
+
 async function startClient(): Promise<void> {
 	const lspSettings = vscode.workspace.getConfiguration('larvae-lsp')
 	if (!(lspSettings.get<boolean>('enabled') ?? true)) return
@@ -220,13 +331,11 @@ async function startClient(): Promise<void> {
 		args,
 	}
 
-	const documentSelector = [{ scheme: 'file', language: 'luaux' }]
-	if (includePlainLuau()) {
-		documentSelector.push(
-			{ scheme: 'file', language: 'luau' },
-			{ scheme: 'file', language: 'lua' },
-		)
-	}
+	const documentSelector = await documentSelectorFor()
+
+	// Nothing to serve: no worm claims a file, and plain Luau went to
+	// luau-lsp. Starting a server that every request declines helps nobody.
+	if (documentSelector.length === 0) return
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector,
@@ -532,9 +641,19 @@ async function runProcess(
 	})
 }
 
+// Whether this file is one larvae answers for: plain Luau, or a file some
+// worm of the project claims.
+function isServed(document: vscode.TextDocument): boolean {
+	if (['luau', 'lua'].includes(document.languageId)) return true
+
+	return claimed.some((extension) =>
+		document.uri.fsPath.endsWith(`.${extension}`),
+	)
+}
+
 async function processOnSave(document: vscode.TextDocument): Promise<void> {
 	if (document.uri.scheme !== 'file') return
-	if (!['luau', 'luaux', 'lua'].includes(document.languageId)) return
+	if (!isServed(document)) return
 
 	const config = vscode.workspace.getConfiguration('larvae', document.uri)
 	if (!config.get<boolean>('processOnSave')) return
@@ -696,12 +815,15 @@ export async function activate(
 		}),
 	)
 
+	/*
+	The quick fix runs on every file and answers only where a larvae
+	diagnostic sits, which is the check the provider already makes. A
+	narrower selector would have to name a worm's language, and larvae
+	does not know one.
+	*/
 	context.subscriptions.push(
 		vscode.languages.registerCodeActionsProvider(
-			['luau', 'luaux', 'lua'].map((language) => ({
-				scheme: 'file' as const,
-				language,
-			})),
+			{ scheme: 'file' },
 			ignoreQuickFixProvider,
 			{ providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
 		),
