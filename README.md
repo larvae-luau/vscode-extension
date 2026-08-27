@@ -100,6 +100,10 @@ larvae can replace luau-lsp or run beside it; the difference is which files the 
 ## Commands
 
 - **Larvae: Restart Language Server** — restarts `larvae lsp` (also happens automatically when `larvae.path` changes).
+- **Larvae: Compute Bytecode for file** — compiles the active file and shows the bytecode listing in a read-only document beside it.
+- **Larvae: Compute Compiler Remarks for file** — the same, showing what the compiler says about the optimizations it made.
+
+Both commands ask which optimization level to compile at; `larvae-lsp.bytecode.*` supplies the debug level, the type info level, and the vector configuration. A file a worm claims compiles through that worm first, so the listing is of the Luau the place receives. The view follows the file: it redraws as you type and as you switch editors. Both need the `larvae-lsp` binary, which carries the analyzer that compiles the source; without it the view says so.
 
 ## Development
 

@@ -462,6 +462,8 @@ async function startClient(): Promise<void> {
 
 	try {
 		await client.start()
+		// the start refreshed `claimed`, which decides what larvae serves
+		updateServesContext()
 		void syncWormDefinitions()
 	} catch {
 		client = undefined
@@ -865,6 +867,194 @@ async function stopClient(): Promise<void> {
 	await stopping.stop()
 }
 
+/*
+The compiled views of the open file: its bytecode, and the compiler's
+remarks about it.
+
+luau-lsp shows the same two under its own prefix, and this mirrors it: the
+command asks for an optimization level, opens a read-only document in the
+second column, and a content provider asks the server for the listing. The
+view follows the file, so it redraws on every edit and on every switch of
+the active editor.
+*/
+const COMPILED_VIEWS = [
+	{
+		command: 'larvae.computeBytecode',
+		scheme: 'larvae-bytecode',
+		name: 'bytecode',
+		method: 'larvae/bytecode',
+	},
+	{
+		command: 'larvae.computeCompilerRemarks',
+		scheme: 'larvae-remarks',
+		name: 'compiler-remarks',
+		method: 'larvae/compilerRemarks',
+	},
+] as const
+
+// The level both views compile at, chosen whenever a command runs. luau-lsp
+// keeps one level for both and starts at O2, and larvae's server reads the
+// same number as its own default.
+let optimizationLevel = 2
+
+// Long enough for the edit to reach the server before the request that reads
+// it. luau-lsp waits the same 10ms for the same reason.
+const REFRESH_DELAY_MS = 10
+
+async function askOptimizationLevel(): Promise<number> {
+	const picked = await vscode.window.showQuickPick(
+		[
+			{
+				label: 'O2',
+				detail:
+					'Includes optimizations that harm debuggability such as inlining',
+				picked: true,
+			},
+			{
+				label: 'O1',
+				detail:
+					"Baseline optimization level that doesn't prevent debuggability",
+			},
+			{ label: 'None', detail: 'No optimization' },
+		],
+		{
+			title: 'Select Optimization Level',
+			placeHolder: 'Select optimization level',
+		},
+	)
+
+	if (picked?.label === 'None') return 0
+	if (picked?.label === 'O2') return 2
+	return 1
+}
+
+// A file larvae answers for, on disk. The virtual view itself is neither.
+function isServedFile(document: vscode.TextDocument): boolean {
+	return document.uri.scheme === 'file' && isServed(document)
+}
+
+function activeServedEditor(): vscode.TextEditor | undefined {
+	const editor = vscode.window.activeTextEditor
+	return editor && isServedFile(editor.document) ? editor : undefined
+}
+
+const NO_LISTING = `-- larvae has no listing for this file.
+--
+-- The larvae-lsp binary carries the analyzer that compiles it, and a file
+-- that does not compile has nothing to show.
+`
+
+const NO_SERVER = '-- The larvae language server is not running.\n'
+
+class CompiledView implements vscode.TextDocumentContentProvider {
+	readonly uri: vscode.Uri
+	private readonly changed = new vscode.EventEmitter<vscode.Uri>()
+
+	constructor(
+		scheme: string,
+		name: string,
+		private readonly method: string,
+	) {
+		this.uri = vscode.Uri.parse(`${scheme}://bytecode/${name}.luau`)
+	}
+
+	get onDidChange(): vscode.Event<vscode.Uri> {
+		return this.changed.event
+	}
+
+	refresh(): void {
+		this.changed.fire(this.uri)
+	}
+
+	async provideTextDocumentContent(): Promise<string> {
+		const editor = activeServedEditor()
+		if (!editor) return ''
+
+		const running = client
+		if (!running) return NO_SERVER
+
+		const params = {
+			textDocument: running.code2ProtocolConverter.asTextDocumentIdentifier(
+				editor.document,
+			),
+			optimizationLevel,
+		}
+
+		try {
+			// null is a server with no analyzer, or a file it could not compile
+			return (
+				(await running.sendRequest<string | null>(this.method, params)) ??
+				NO_LISTING
+			)
+		} catch {
+			return NO_LISTING
+		}
+	}
+}
+
+function registerCompiledViews(context: vscode.ExtensionContext): void {
+	for (const view of COMPILED_VIEWS) {
+		const content = new CompiledView(view.scheme, view.name, view.method)
+
+		context.subscriptions.push(
+			vscode.workspace.registerTextDocumentContentProvider(
+				view.scheme,
+				content,
+			),
+
+			vscode.workspace.onDidChangeTextDocument((event) => {
+				if (isServedFile(event.document)) {
+					setTimeout(() => content.refresh(), REFRESH_DELAY_MS)
+				}
+			}),
+
+			vscode.window.onDidChangeActiveTextEditor((editor) => {
+				if (editor && isServedFile(editor.document)) content.refresh()
+			}),
+
+			vscode.commands.registerTextEditorCommand(
+				view.command,
+				async (editor) => {
+					if (!isServedFile(editor.document)) {
+						vscode.window.showInformationMessage(
+							'Larvae compiles no view for this file. Open a Luau file, or one a worm claims.',
+						)
+						return
+					}
+
+					optimizationLevel = await askOptimizationLevel()
+
+					const document = await vscode.workspace.openTextDocument(content.uri)
+					// the view may already be open on an older listing
+					content.refresh()
+
+					await vscode.window.showTextDocument(document, {
+						viewColumn: vscode.ViewColumn.Two,
+						preserveFocus: true,
+					})
+				},
+			),
+		)
+	}
+}
+
+/*
+Whether larvae answers for the file the editor shows, as a `when` clause.
+
+The editor-title buttons read it. A worm's file carries a language id larvae
+never registered, so a clause on resourceLangId would hide the buttons on
+exactly the files larvae exists for.
+*/
+function updateServesContext(): void {
+	const editor = vscode.window.activeTextEditor
+
+	void vscode.commands.executeCommand(
+		'setContext',
+		'larvae.servesActiveFile',
+		editor !== undefined && isServedFile(editor.document),
+	)
+}
+
 export async function activate(
 	context: vscode.ExtensionContext,
 ): Promise<void> {
@@ -905,6 +1095,12 @@ export async function activate(
 		vscode.workspace.onDidSaveTextDocument((document) => {
 			void processOnSave(document)
 		}),
+	)
+
+	registerCompiledViews(context)
+
+	context.subscriptions.push(
+		vscode.window.onDidChangeActiveTextEditor(() => updateServesContext()),
 	)
 
 	context.subscriptions.push(

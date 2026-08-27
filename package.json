@@ -72,8 +72,30 @@
 				"command": "larvae.restartServer",
 				"title": "Restart Language Server",
 				"category": "Larvae"
+			},
+			{
+				"command": "larvae.computeBytecode",
+				"title": "Compute Bytecode for file",
+				"category": "Larvae"
+			},
+			{
+				"command": "larvae.computeCompilerRemarks",
+				"title": "Compute Compiler Remarks for file",
+				"category": "Larvae"
 			}
 		],
+		"menus": {
+			"editor/title": [
+				{
+					"when": "larvae.servesActiveFile",
+					"command": "larvae.computeBytecode"
+				},
+				{
+					"when": "larvae.servesActiveFile",
+					"command": "larvae.computeCompilerRemarks"
+				}
+			]
+		},
 		"configuration": {
 			"title": "Larvae",
 			"properties": {
