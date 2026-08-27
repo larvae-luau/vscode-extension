@@ -6,6 +6,7 @@ The extension launches larvae's language server and talks to it over stdio:
 
 - **Diagnostics** — larvae's lints show up in the editor and the Problems panel as you type, with their native severities (errors as errors, warnings as warnings).
 - **Formatting** — larvae registers as a document formatter, so *Format Document* and format-on-save run `larvae fmt`'s formatter on the current file.
+- **Highlighting** — the bundled grammar is luau-lsp's (so plain Luau colors identically), extended with the `class`, `extern`, `extends`, and `public` syntax; `const` and `export` come with it upstream. On files larvae serves, the server's semantic tokens refine it with tree-aware coloring.
 - **Code actions** — fixes the server offers for its findings appear as quick fixes, next to the extension's own allow-flag suppressions.
 - **Navigation and highlighting** — go to definition, find references, rename, workspace symbol search, document highlights, folding, selection ranges, document links, color previews, and semantic coloring, from larvae's own parser.
 - **Analyzer features** — hover, completion with auto-imports, signature help, inlay hints, and go to type definition, when the `larvae-lsp` binary carries the Luau analyzer.
