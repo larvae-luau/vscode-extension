@@ -31,6 +31,20 @@ Set larvae as the default formatter for Luau and enable format-on-save in your `
 }
 ```
 
+## Completions inside strings
+
+A require path is typed inside a string, and VS Code hides quick suggestions there. The extension ships a `[luau]` default that turns them on, so `require("` offers the paths of the project:
+
+```json
+{
+    "[luau]": {
+        "editor.quickSuggestions": { "strings": true }
+    }
+}
+```
+
+Write the same key in your own settings to turn it off again.
+
 ## Settings
 
 | Setting | Default | Description |
