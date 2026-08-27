@@ -55,11 +55,14 @@ Write the same key in your own settings to turn it off again.
 | `larvae.hideOutputFolder` | `true` | Hide larvae's output directory (`output` in `larvae.toml`) from the explorer via a `files.exclude` entry. The entry is written once per folder; deleting it by hand sticks, and toggling the setting off and on writes it again. Only touches folders containing a `larvae.toml`. |
 | `larvae-lsp.enabled` | `true` | Start the language server at all. Project side: `[lsp] enabled`. |
 | `larvae-lsp.claimOnly` | `true` | Serve only worm-claimed files (e.g. `.luaux`), leaving plain Luau to luau-lsp. Project side: `[lsp] claim_only`. |
+| `larvae-lsp.sourcemap` | `"sourcemap.json"` | Path to the rojo sourcemap, relative to the project root. The server reads it for the instance tree of the project. Project side: `[lsp] sourcemap`. |
 | `larvae-lsp.completion.enabled` | `true` | Provide completion at all. Project side: `[lsp.completion] enabled`. |
 | `larvae-lsp.completion.showKeywords` | `true` | Offer fitting keywords beside the names. Project side: `[lsp.completion] show_keywords`. |
 | `larvae-lsp.completion.imports.enabled` | `true` | Offer not-yet-imported services and modules, inserting the import on accept. Project side: `[lsp.completion.imports] enabled`. |
 | `larvae-lsp.completion.imports.useConst` | `true` | Auto-imports bind with `const` instead of `local`. Project side: `[lsp.completion.imports] use_const`. |
 | `larvae-lsp.hover.enabled` | `true` | Show type information on hover. Project side: `[lsp.hover] enabled`. |
+| `larvae-lsp.hover.showTableKinds` | `false` | Keep the markers that say a table is sealed. Project side: `[lsp.hover] show_table_kinds`. |
+| `larvae-lsp.hover.includeStringLength` | `true` | Say how long a string literal is, on the hover card of one. Project side: `[lsp.hover] include_string_length`. |
 | `larvae-lsp.signatureHelp.enabled` | `true` | Show the call signature while typing arguments. Project side: `[lsp.signature_help] enabled`. |
 | `larvae-lsp.inlayHints.variableTypes` | `false` | Show inferred types on unannotated locals. Project side: `[lsp.inlay_hints] variable_types`. |
 | `larvae-lsp.inlayHints.parameterTypes` | `false` | Show inferred types on unannotated parameters. Project side: `[lsp.inlay_hints] parameter_types`. |

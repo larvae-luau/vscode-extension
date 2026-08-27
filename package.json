@@ -111,6 +111,12 @@
 					"scope": "window",
 					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
+				"larvae-lsp.sourcemap": {
+					"type": "string",
+					"default": "sourcemap.json",
+					"scope": "window",
+					"markdownDescription": "Path to the rojo sourcemap, relative to the project root. The server reads it for the instance tree, and says nothing when the file is absent. Project side: `sourcemap` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
+				},
 				"larvae-lsp.completion.enabled": {
 					"type": "boolean",
 					"default": true,
@@ -140,6 +146,18 @@
 					"default": true,
 					"scope": "window",
 					"markdownDescription": "Show type information on hover. Project side: `[lsp.hover] enabled`."
+				},
+				"larvae-lsp.hover.showTableKinds": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Keep the `{| |}` markers that say a table is sealed. Project side: `[lsp.hover] show_table_kinds`."
+				},
+				"larvae-lsp.hover.includeStringLength": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Say how long a string literal is, on the hover card of one. Project side: `[lsp.hover] include_string_length`."
 				},
 				"larvae-lsp.signatureHelp.enabled": {
 					"type": "boolean",
