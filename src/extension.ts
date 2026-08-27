@@ -196,19 +196,89 @@ function includePlainLuau(): boolean {
 }
 
 /*
+The inlay-hint settings that fall back to luau-lsp's own, by name.
+
+A user who migrates from luau-lsp already carries these three under the
+`luau-lsp.` prefix, and expects the hints they already turned on. Only
+these three: luau-lsp has five more, and larvae's server reads none of them.
+*/
+const INLAY_HINT_FALLBACKS = [
+	'variableTypes',
+	'parameterTypes',
+	'typeHintMaxLength',
+] as const
+
+/*
+The value a user wrote for one setting, at the most specific scope that
+carries one.
+
+`undefined` means the setting sits at the default the package declares,
+which is what makes the fallback safe: a borrowed value replaces a default,
+never a choice.
+*/
+function explicitValue<T>(section: string, id: string): T | undefined {
+	const inspected = vscode.workspace.getConfiguration(section).inspect<T>(id)
+	if (!inspected) return undefined
+
+	return (
+		inspected.workspaceFolderValue ??
+		inspected.workspaceValue ??
+		inspected.globalValue
+	)
+}
+
+/*
 The `larvae-lsp` settings, whole, for the initialize handshake.
 
 The client sends `{ settings: { "larvae-lsp": ... } }` on every settings
 change, and this is the lookup that notification makes. Initialize sends the
 same blob from the same place, so the server reads one shape and a fresh
 session starts on the values the user already has.
+
+Three inlay-hint values are borrowed from luau-lsp where the larvae one is
+untouched, so a migrated settings file keeps the hints it had.
 */
 function editorSettings(): Record<string, unknown> {
-	return (
+	const declared =
 		vscode.workspace
 			.getConfiguration()
 			.get<Record<string, unknown>>('larvae-lsp') ?? {}
-	)
+
+	// VS Code freezes the object it hands back, so the merge works on a copy
+	const settings: Record<string, unknown> = { ...declared },
+		inlayHints: Record<string, unknown> = {
+			...(declared.inlayHints as Record<string, unknown> | undefined),
+		}
+
+	for (const id of INLAY_HINT_FALLBACKS) {
+		if (explicitValue('larvae-lsp', `inlayHints.${id}`) !== undefined) continue
+
+		const borrowed = explicitValue('luau-lsp', `inlayHints.${id}`)
+		if (borrowed === undefined) continue
+
+		inlayHints[id] = borrowed
+	}
+
+	settings.inlayHints = inlayHints
+
+	return settings
+}
+
+/*
+Hands the merged settings to a running server.
+
+The client's own configurationSection sync would send the raw `larvae-lsp`
+section and drop the luau-lsp fallback, so this notification replaces it and
+carries the blob initialize carried.
+*/
+function sendSettings(): void {
+	client
+		?.sendNotification('workspace/didChangeConfiguration', {
+			settings: { 'larvae-lsp': editorSettings() },
+		})
+		.catch(() => {
+			// the server is not running; its next initialize carries the values
+		})
 }
 
 type Claims = { claims?: string[] }
@@ -347,9 +417,6 @@ async function startClient(): Promise<void> {
 			settings: {
 				'larvae-lsp': editorSettings(),
 			},
-		},
-		synchronize: {
-			configurationSection: 'larvae-lsp',
 		},
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
@@ -849,6 +916,12 @@ export async function activate(
 			) {
 				await stopClient()
 				await startClient()
+			} else if (
+				event.affectsConfiguration('larvae-lsp') ||
+				// a borrowed inlay-hint value changes the blob larvae sends
+				event.affectsConfiguration('luau-lsp.inlayHints')
+			) {
+				sendSettings()
 			}
 
 			if (event.affectsConfiguration('larvae.hideOutputFolder')) {

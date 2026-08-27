@@ -78,6 +78,18 @@ Write the same key in your own settings to turn it off again.
 
 The `larvae-lsp.*` ids mirror the `[lsp]` table in `larvae.toml`: the editor setting is the personal side, the project file is the shared side, and where both speak, the project wins.
 
+### Inlay hints carried over from luau-lsp
+
+Three inlay-hint settings fall back to luau-lsp's own, so a settings file brought over from luau-lsp keeps the hints it already had:
+
+| larvae | falls back to |
+| --- | --- |
+| `larvae-lsp.inlayHints.variableTypes` | `luau-lsp.inlayHints.variableTypes` |
+| `larvae-lsp.inlayHints.parameterTypes` | `luau-lsp.inlayHints.parameterTypes` |
+| `larvae-lsp.inlayHints.typeHintMaxLength` | `luau-lsp.inlayHints.typeHintMaxLength` |
+
+The larvae setting wins whenever you write one. Where you leave it at its default and the luau-lsp id carries a value you wrote, larvae sends that value to its server instead. These three ids are the only ones borrowed.
+
 ## Working alongside luau-lsp
 
 larvae can replace luau-lsp or run beside it; the difference is which files the server attaches to:
