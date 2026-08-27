@@ -1108,7 +1108,9 @@ export async function activate(
 			if (
 				event.affectsConfiguration('larvae.path') ||
 				event.affectsConfiguration('larvae-lsp.enabled') ||
-				event.affectsConfiguration('larvae-lsp.claimOnly')
+				event.affectsConfiguration('larvae-lsp.claimOnly') ||
+				// The analyzer half advertises capabilities, and only a restart re-advertises.
+				event.affectsConfiguration('larvae-lsp.analyzer')
 			) {
 				await stopClient()
 				await startClient()

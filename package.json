@@ -128,6 +128,23 @@
 					"scope": "window",
 					"markdownDescription": "Start the larvae language server. Off, the extension starts nothing and another server owns the files. Project side: `enabled` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
+				"larvae-lsp.analyzer": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "Serve the Luau type intelligence: hover, completion, type diagnostics, signatures, inlay hints, and the compiled views. Off, larvae serves what it always served — lints, format, code actions, and the outline — on claimed and plain files alike. Project side: `analyzer` under `[lsp]`; where both speak, the project wins."
+				},
+				"larvae-lsp.characterType": {
+					"type": "string",
+					"enum": [
+						"r15",
+						"r6",
+						"notSet"
+					],
+					"default": "r15",
+					"scope": "window",
+					"markdownDescription": "What `Player.Character` types to. `r15` and `r6` carry the body parts of their rig, so `player.Character.Humanoid` resolves with no cast. `notSet` types it as the union of the two. Project side: `character_type` under `[lsp]`."
+				},
 				"larvae-lsp.claimOnly": {
 					"type": "boolean",
 					"default": false,
