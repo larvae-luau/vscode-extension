@@ -126,13 +126,13 @@
 					"type": "boolean",
 					"default": true,
 					"scope": "window",
-					"markdownDescription": "Start the larvae language server. Off, the extension starts nothing and another server owns the files. Project side: `enabled` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
+					"markdownDescription": "Start the larvae language server at all. Off, the extension starts nothing and another server owns the files. To keep the server but turn off only the Luau type intelligence, use `larvae-lsp.analyzer` below. Project side: `enabled` under `[lsp]`; where both speak, the project wins."
 				},
 				"larvae-lsp.analyzer": {
 					"type": "boolean",
 					"default": true,
 					"scope": "window",
-					"markdownDescription": "Serve the Luau type intelligence: hover, completion, type diagnostics, signatures, inlay hints, and the compiled views. Off, larvae serves what it always served — lints, format, code actions, and the outline — on claimed and plain files alike. Project side: `analyzer` under `[lsp]`; where both speak, the project wins."
+					"markdownDescription": "Serve the Luau type intelligence: hover, completion, type diagnostics, signatures, inlay hints, and the compiled views. Off, larvae still runs and serves what it always served — lints, format, code actions, and the outline — on claimed and plain files alike. This is the half `larvae-lsp.enabled` keeps. Project side: `analyzer` under `[lsp]`."
 				},
 				"larvae-lsp.characterType": {
 					"type": "string",
