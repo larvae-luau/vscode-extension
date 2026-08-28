@@ -175,6 +175,18 @@
 					"scope": "window",
 					"markdownDescription": "Offer a service or module the file has not imported yet, and insert the import on accept. Project side: `[lsp.completion.imports] enabled`."
 				},
+				"larvae-lsp.completion.imports.requireStyle": {
+					"type": "string",
+					"enum": [
+						"auto",
+						"alwaysRelative",
+						"alwaysAbsolute",
+						"nearestAbsolute"
+					],
+					"default": "auto",
+					"scope": "window",
+					"markdownDescription": "How a module auto-import spells its require. `auto` writes an alias where one covers the module and the relative form elsewhere; `alwaysAbsolute` writes the `@game` path; `nearestAbsolute` takes the shortest stable anchor: an alias, then `@game`, then relative. Project side: `[lsp.completion.imports] require_style`."
+				},
 				"larvae-lsp.completion.imports.useConst": {
 					"type": "boolean",
 					"default": true,
