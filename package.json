@@ -175,6 +175,12 @@
 					"scope": "window",
 					"markdownDescription": "Offer a service or module the file has not imported yet, and insert the import on accept. Project side: `[lsp.completion.imports] enabled`."
 				},
+				"larvae-lsp.completion.hideDeprecated": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Drop deprecated functions and properties from the completion list entirely. Off, they stay listed with a strikethrough. Project side: `[lsp.completion] hide_deprecated`."
+				},
 				"larvae-lsp.completion.imports.requireStyle": {
 					"type": "string",
 					"enum": [
