@@ -217,6 +217,23 @@
 					"scope": "window",
 					"markdownDescription": "Show the inferred type of a parameter the author left unannotated. Project side: `[lsp.inlay_hints] parameter_types`."
 				},
+				"larvae-lsp.inlayHints.functionReturnTypes": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Show the inferred return type of a function, after its parameter list. Project side: `[lsp.inlay_hints] function_return_types`."
+				},
+				"larvae-lsp.inlayHints.parameterNames": {
+					"type": "string",
+					"enum": [
+						"none",
+						"literals",
+						"all"
+					],
+					"default": "none",
+					"scope": "window",
+					"markdownDescription": "Show the name of each parameter before the argument that fills it: on no call, on literal arguments, or on every one. Project side: `[lsp.inlay_hints] parameter_names`."
+				},
 				"larvae-lsp.inlayHints.typeHintMaxLength": {
 					"type": "number",
 					"default": 50,

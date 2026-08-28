@@ -198,14 +198,16 @@ function includePlainLuau(): boolean {
 /*
 The inlay-hint settings that fall back to luau-lsp's own, by name.
 
-A user who migrates from luau-lsp already carries these three under the
+A user who migrates from luau-lsp already carries these five under the
 `luau-lsp.` prefix, and expects the hints they already turned on. Only
-these three: luau-lsp has five more, and larvae's server reads none of them.
+these five: luau-lsp has more, and larvae's server reads none of them.
 */
 const INLAY_HINT_FALLBACKS = [
 	'variableTypes',
 	'parameterTypes',
 	'typeHintMaxLength',
+	'functionReturnTypes',
+	'parameterNames',
 ] as const
 
 /*
@@ -235,7 +237,7 @@ change, and this is the lookup that notification makes. Initialize sends the
 same blob from the same place, so the server reads one shape and a fresh
 session starts on the values the user already has.
 
-Three inlay-hint values are borrowed from luau-lsp where the larvae one is
+Five inlay-hint values are borrowed from luau-lsp where the larvae one is
 untouched, so a migrated settings file keeps the hints it had.
 */
 function editorSettings(): Record<string, unknown> {
