@@ -130,9 +130,15 @@
 				},
 				"larvae-lsp.analyzer": {
 					"type": "boolean",
-					"default": true,
+					"default": false,
 					"scope": "window",
 					"markdownDescription": "Serve the Luau type intelligence: hover, completion, type diagnostics, signatures, inlay hints, and the compiled views. Off, larvae still runs and serves what it always served — lints, format, code actions, and the outline — on claimed and plain files alike. This is the half `larvae-lsp.enabled` keeps. Project side: `analyzer` under `[lsp]`."
+				},
+				"larvae-lsp.claimOnly": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Turn it on when stock luau-lsp already runs here. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
 				"larvae-lsp.characterType": {
 					"type": "string",
@@ -144,12 +150,6 @@
 					"default": "r15",
 					"scope": "window",
 					"markdownDescription": "What `Player.Character` types to. `r15` and `r6` carry the body parts of their rig, so `player.Character.Humanoid` resolves with no cast. `notSet` types it as the union of the two. Project side: `character_type` under `[lsp]`."
-				},
-				"larvae-lsp.claimOnly": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Turn it on when stock luau-lsp already runs here. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
 				"larvae-lsp.sourcemap": {
 					"type": "string",
