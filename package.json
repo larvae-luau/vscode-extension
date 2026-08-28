@@ -246,6 +246,13 @@
 					"scope": "window",
 					"markdownDescription": "Show the name of each parameter before the argument that fills it: on no call, on literal arguments, or on every one. Project side: `[lsp.inlay_hints] parameter_names`."
 				},
+				"larvae-lsp.inlayHints.updateDelay": {
+					"type": "number",
+					"default": 700,
+					"minimum": 0,
+					"scope": "window",
+					"markdownDescription": "How long the inlay hints hold still while you type, in milliseconds. A request mid-edit answers with the last settled hints, and one refresh follows the pause. 0 recomputes on every request. Project side: `[lsp.inlay_hints] update_delay`."
+				},
 				"larvae-lsp.inlayHints.typeHintMaxLength": {
 					"type": "number",
 					"default": 50,
