@@ -198,37 +198,6 @@ function includePlainLuau(): boolean {
 /*
 The inlay-hint settings that fall back to luau-lsp's own, by name.
 
-A user who migrates from luau-lsp already carries these five under the
-`luau-lsp.` prefix, and expects the hints they already turned on. Only
-these five: luau-lsp has more, and larvae's server reads none of them.
-*/
-const INLAY_HINT_FALLBACKS = [
-	'variableTypes',
-	'parameterTypes',
-	'typeHintMaxLength',
-	'functionReturnTypes',
-	'parameterNames',
-] as const
-
-/*
-The value a user wrote for one setting, at the most specific scope that
-carries one.
-
-`undefined` means the setting sits at the default the package declares,
-which is what makes the fallback safe: a borrowed value replaces a default,
-never a choice.
-*/
-function explicitValue<T>(section: string, id: string): T | undefined {
-	const inspected = vscode.workspace.getConfiguration(section).inspect<T>(id)
-	if (!inspected) return undefined
-
-	return (
-		inspected.workspaceFolderValue ??
-		inspected.workspaceValue ??
-		inspected.globalValue
-	)
-}
-
 /*
 The `larvae-lsp` settings, whole, for the initialize handshake.
 
@@ -237,33 +206,17 @@ change, and this is the lookup that notification makes. Initialize sends the
 same blob from the same place, so the server reads one shape and a fresh
 session starts on the values the user already has.
 
-Five inlay-hint values are borrowed from luau-lsp where the larvae one is
-untouched, so a migrated settings file keeps the hints it had.
+The `luau-lsp.inlayHints` values are not borrowed any more. Unchecking a
+larvae box back to its default removes the entry, and a borrow would
+quietly revive the old luau-lsp choice, so the box read as dead. The
+larvae settings alone decide.
 */
 function editorSettings(): Record<string, unknown> {
-	const declared =
+	return (
 		vscode.workspace
 			.getConfiguration()
 			.get<Record<string, unknown>>('larvae-lsp') ?? {}
-
-	// VS Code freezes the object it hands back, so the merge works on a copy
-	const settings: Record<string, unknown> = { ...declared },
-		inlayHints: Record<string, unknown> = {
-			...(declared.inlayHints as Record<string, unknown> | undefined),
-		}
-
-	for (const id of INLAY_HINT_FALLBACKS) {
-		if (explicitValue('larvae-lsp', `inlayHints.${id}`) !== undefined) continue
-
-		const borrowed = explicitValue('luau-lsp', `inlayHints.${id}`)
-		if (borrowed === undefined) continue
-
-		inlayHints[id] = borrowed
-	}
-
-	settings.inlayHints = inlayHints
-
-	return settings
+	)
 }
 
 /*
@@ -1116,11 +1069,7 @@ export async function activate(
 			) {
 				await stopClient()
 				await startClient()
-			} else if (
-				event.affectsConfiguration('larvae-lsp') ||
-				// a borrowed inlay-hint value changes the blob larvae sends
-				event.affectsConfiguration('luau-lsp.inlayHints')
-			) {
+			} else if (event.affectsConfiguration('larvae-lsp')) {
 				sendSettings()
 			}
 
