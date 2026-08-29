@@ -161,13 +161,19 @@
 					"type": "boolean",
 					"default": true,
 					"scope": "window",
-					"markdownDescription": "The server runs `rojo sourcemap --watch` itself, so the map follows every file the project adds or moves. It needs rojo on the path and a rojo project file; without either the server says so once and serves the map it has. Project side: `sourcemap_autogenerate` under `[lsp]`."
+					"markdownDescription": "The server runs the sourcemap command itself, so the map follows every file the project adds or moves. With no command set, rojo is inferred from its project file. Project side: `sourcemap_autogenerate` under `[lsp]`."
 				},
 				"larvae-lsp.rojoProjectFile": {
 					"type": "string",
 					"default": "default.project.json",
 					"scope": "window",
-					"markdownDescription": "The rojo project the sourcemap watch reads, relative to the project root. Project side: `rojo_project_file` under `[lsp]`."
+					"markdownDescription": "The rojo project the inferred sourcemap command reads, relative to the project root. Project side: `rojo_project_file` under `[lsp]`."
+				},
+				"larvae-lsp.sourcemapCommand": {
+					"type": "string",
+					"default": "",
+					"scope": "window",
+					"markdownDescription": "The command that generates the sourcemap, run through the shell in the project root. Empty infers rojo from its project file. A project on another sync tool names its own generator here, ideally one that watches. Project side: `sourcemap_command` under `[lsp]`."
 				},
 				"larvae-lsp.completion.enabled": {
 					"type": "boolean",
