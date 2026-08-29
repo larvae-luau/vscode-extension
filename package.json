@@ -157,6 +157,18 @@
 					"scope": "window",
 					"markdownDescription": "Path to the rojo sourcemap, relative to the project root. The server reads it for the instance tree, and says nothing when the file is absent. Project side: `sourcemap` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
+				"larvae-lsp.sourcemapAutogenerate": {
+					"type": "boolean",
+					"default": true,
+					"scope": "window",
+					"markdownDescription": "The server runs `rojo sourcemap --watch` itself, so the map follows every file the project adds or moves. It needs rojo on the path and a rojo project file; without either the server says so once and serves the map it has. Project side: `sourcemap_autogenerate` under `[lsp]`."
+				},
+				"larvae-lsp.rojoProjectFile": {
+					"type": "string",
+					"default": "default.project.json",
+					"scope": "window",
+					"markdownDescription": "The rojo project the sourcemap watch reads, relative to the project root. Project side: `rojo_project_file` under `[lsp]`."
+				},
 				"larvae-lsp.completion.enabled": {
 					"type": "boolean",
 					"default": true,
