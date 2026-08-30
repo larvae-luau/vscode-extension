@@ -171,7 +171,9 @@
 				},
 				"larvae-lsp.definitions": {
 					"type": "array",
-					"items": { "type": "string" },
+					"items": {
+						"type": "string"
+					},
 					"default": [],
 					"scope": "window",
 					"markdownDescription": "Extra type definition files, loaded after the platform globals. Paths are relative to the project root. Project side: `definitions` under `[lsp]`."
