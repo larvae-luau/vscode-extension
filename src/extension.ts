@@ -148,9 +148,19 @@ function pascalCaseLintCode(code: string): string {
 		.join('')
 }
 
-// Reads `claim_only` from the [lsp] section of a folder's larvae.toml.
-// Undefined when the project does not speak.
-function readClaimOnly(folder: vscode.WorkspaceFolder): boolean | undefined {
+/*
+Reads one boolean from the [lsp] section of a folder's larvae.toml.
+Undefined when the project does not speak about that key.
+
+The server applies the same rule over the whole table, and it cannot
+apply it to `enabled`: a server the client never starts reads no
+config at all. So the two keys the client itself acts on are read
+here, by the same rule, and the project wins at the gate as well.
+*/
+function readLspBool(
+	folder: vscode.WorkspaceFolder,
+	key: string,
+): boolean | undefined {
 	let toml: string
 	try {
 		toml = fs.readFileSync(path.join(folder.uri.fsPath, 'larvae.toml'), 'utf8')
@@ -158,7 +168,9 @@ function readClaimOnly(folder: vscode.WorkspaceFolder): boolean | undefined {
 		return undefined
 	}
 
+	const pattern = new RegExp(`^\\s*${key}\\s*=\\s*(true|false)\\b`)
 	let inLsp = false
+
 	for (const line of toml.split('\n')) {
 		const header = line.match(/^\s*\[(.+?)\]/)
 		if (header) {
@@ -167,8 +179,28 @@ function readClaimOnly(folder: vscode.WorkspaceFolder): boolean | undefined {
 		}
 		if (!inLsp) continue
 
-		const value = line.match(/^\s*claim_only\s*=\s*(true|false)\b/)
+		const value = line.match(pattern)
 		if (value) return value[1] === 'true'
+	}
+
+	return undefined
+}
+
+function readClaimOnly(folder: vscode.WorkspaceFolder): boolean | undefined {
+	return readLspBool(folder, 'claim_only')
+}
+
+/*
+Whether any workspace folder's larvae.toml turns the server on or off.
+
+The first folder that speaks decides, which is the rule the rest of
+the settings follow.
+*/
+function projectEnabled(): boolean | undefined {
+	for (const folder of vscode.workspace.workspaceFolders ?? []) {
+		const value = readLspBool(folder, 'enabled')
+
+		if (value !== undefined) return value
 	}
 
 	return undefined
@@ -348,8 +380,16 @@ async function documentSelectorFor(): Promise<
 }
 
 async function startClient(): Promise<void> {
+	/*
+	The project wins here too. A server the client never starts reads
+	no larvae.toml, so the editor setting alone would keep a project
+	that says `enabled = true` from ever being served.
+	*/
 	const lspSettings = vscode.workspace.getConfiguration('larvae-lsp')
-	if (!(lspSettings.get<boolean>('enabled') ?? true)) return
+	const enabled =
+		projectEnabled() ?? lspSettings.get<boolean>('enabled') ?? true
+
+	if (!enabled) return
 
 	const { command, args } = await findServerLaunch()
 
