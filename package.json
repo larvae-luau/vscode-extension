@@ -169,6 +169,13 @@
 					"scope": "window",
 					"markdownDescription": "The rojo project the inferred sourcemap command reads, relative to the project root. Project side: `rojo_project_file` under `[lsp]`."
 				},
+				"larvae-lsp.definitions": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": [],
+					"scope": "window",
+					"markdownDescription": "Extra type definition files, loaded after the platform globals. Paths are relative to the project root. Project side: `definitions` under `[lsp]`."
+				},
 				"larvae-lsp.sourcemapCommand": {
 					"type": "string",
 					"default": "",
