@@ -406,6 +406,9 @@ async function startClient(): Promise<void> {
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector,
+		// one channel for every client this session starts, or each
+		// restart would leave another dead panel behind
+		outputChannel: output(),
 		// editor-side settings travel at initialize and on change; the server
 		// treats larvae.toml as the project side and wins where both speak
 		initializationOptions: {
@@ -455,11 +458,16 @@ async function startClient(): Promise<void> {
 
 	client = new LanguageClient('larvae', 'Larvae', serverOptions, clientOptions)
 
+	log(`starting ${[command, ...args].join(' ')}`)
+	log(`serving ${documentSelector.length} selector(s)`)
+
 	try {
 		await client.start()
 		// the start refreshed `claimed`, which decides what larvae serves
 		updateServesContext()
 		void syncWormDefinitions()
+		log(`started${serverVersion ? ` (larvae ${serverVersion})` : ''}`)
+		log(`claims: ${claimed.length ? claimed.join(', ') : 'none'}`)
 	} catch {
 		client = undefined
 
@@ -664,6 +672,46 @@ const ignoreQuickFixProvider: vscode.CodeActionProvider = {
 
 let processOutput: vscode.OutputChannel | undefined
 
+/*
+The server's output channel, created once and reused by every client.
+
+`new LanguageClient` makes a channel of its own for each instance, and
+larvae restarts the client whenever `larvae.toml` changes, so each edit
+left another dead "Larvae" panel in the output list. One channel owned
+here outlives the clients that write to it.
+*/
+let serverOutput: vscode.OutputChannel | undefined
+
+/// The channel, made on the first call and kept for the session
+function output(): vscode.OutputChannel {
+	if (!serverOutput) {
+		serverOutput = vscode.window.createOutputChannel('Larvae')
+		extensionContext?.subscriptions.push(serverOutput)
+	}
+
+	return serverOutput
+}
+
+/*
+A line in the server channel, when `larvae-lsp.verbose` asks for it.
+
+The setting is for the reports that start "it does nothing": the launch
+line, the settings the client sent, what the project claimed, and every
+restart with its reason. `larvae.trace.server` covers the protocol
+traffic itself, which is a different volume of noise.
+*/
+function log(message: string): void {
+	if (
+		!vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('verbose')
+	) {
+		return
+	}
+
+	const now = new Date().toISOString().slice(11, 23)
+
+	output().appendLine(`[${now}] ${message}`)
+}
+
 // One entry per workspace folder with a `larvae process` run in flight.
 // Saves that land mid-run set `queued` so the folder is rebuilt once more.
 const processRuns = new Map<string, { queued: boolean }>()
@@ -848,6 +896,7 @@ function scheduleServerRestart(): void {
 
 	restartTimer = setTimeout(async () => {
 		restartTimer = undefined
+		log('larvae.toml changed, restarting')
 		await stopClient()
 		await startClient()
 	}, 300)
@@ -859,6 +908,7 @@ async function stopClient(): Promise<void> {
 	const stopping = client
 	client = undefined
 
+	log('stopping the server')
 	await stopping.stop()
 }
 

@@ -178,6 +178,21 @@
 					"scope": "window",
 					"markdownDescription": "Extra type definition files, loaded after the platform globals. Paths are relative to the project root. Project side: `definitions` under `[lsp]`."
 				},
+				"larvae-lsp.verbose": {
+					"type": "boolean",
+					"default": false,
+					"scope": "window",
+					"markdownDescription": "Write what the extension does to the **Larvae** output channel: the server it launched, what the project claims, and every restart with its reason. For the protocol traffic itself, set `larvae.trace.server` instead."
+				},
+				"larvae-lsp.documentation": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"scope": "window",
+					"markdownDescription": "luau-lsp `documentationFiles` JSON databases, loaded after the bundled Roblox reference and read for hover and completion. Paths are relative to the project root, and a later file wins where two document one symbol. Project side: `documentation` under `[lsp]`."
+				},
 				"larvae-lsp.sourcemapCommand": {
 					"type": "string",
 					"default": "",
