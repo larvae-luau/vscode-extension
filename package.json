@@ -2,7 +2,7 @@
 	"name": "larvae",
 	"displayName": "Larvae",
 	"description": "Formatting, lints, and Luau language features, powered by the larvae toolchain",
-	"version": "0.7.0",
+	"version": "0.7.1",
 	"publisher": "AndrewBordis",
 	"license": "MIT",
 	"icon": "assets/larvae.png",
