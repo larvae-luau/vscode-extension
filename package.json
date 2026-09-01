@@ -169,6 +169,18 @@
 					"scope": "window",
 					"markdownDescription": "The rojo project the inferred sourcemap command reads, relative to the project root. Project side: `rojo_project_file` under `[lsp]`."
 				},
+				"larvae-lsp.robloxSecurityLevel": {
+					"type": "string",
+					"enum": [
+						"none",
+						"local-user-security",
+						"plugin-security",
+						"roblox-script-security"
+					],
+					"default": "roblox-script-security",
+					"scope": "window",
+					"markdownDescription": "Which Roblox API surface the analyzer types against. `roblox-script-security` holds every member and is what larvae has always loaded; a plugin sees less, and a live game less again. Project side: `roblox_security_level` under `[lsp]`."
+				},
 				"larvae-lsp.definitions": {
 					"type": "array",
 					"items": {
