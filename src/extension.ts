@@ -130,6 +130,27 @@ async function findServerLaunch(): Promise<ServerLaunch> {
 		if (onPath) return { command: onPath, args: [] }
 	}
 
+	/*
+	A tool manager installs the one binary its manifest names, so a
+	larvae from rokit, aftman, or ember has no server beside it. The
+	install directory holds the server whichever tool owns the CLI, so
+	it is the last place to look before the fallback.
+	*/
+	const home = process.env.HOME ?? process.env.USERPROFILE
+	if (home) {
+		const installed = path.join(home, '.larvae', 'bin', dedicated)
+		if (fs.existsSync(installed)) return { command: installed, args: [] }
+	}
+
+	/*
+	The fallback serves the lints and the formatter and none of the
+	types. It is a working editor, not a broken one, but a user who
+	expected hover deserves the reason and the one command that fixes
+	it.
+	*/
+	log('larvae-lsp was not found; serving without the analyzer')
+	log('run `larvae self install` to fetch the server and its analyzer')
+
 	return { command, args: ['lsp'] }
 }
 
