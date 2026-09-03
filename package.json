@@ -311,7 +311,7 @@
 					"default": 700,
 					"minimum": 0,
 					"scope": "window",
-					"markdownDescription": "How long the inlay hints hold still while you type, in milliseconds. A request mid-edit answers with the last settled hints, and one refresh follows the pause. 0 recomputes on every request. Project side: `[lsp.inlay_hints] update_delay`."
+					"markdownDescription": "No effect since larvae 0.8: every hint request computes against the current text, the way luau-lsp does. Kept so a settings file that wrote it still loads."
 				},
 				"larvae-lsp.inlayHints.typeHintMaxLength": {
 					"type": "number",
