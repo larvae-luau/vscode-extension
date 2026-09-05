@@ -8,8 +8,8 @@ The extension launches larvae's language server and talks to it over stdio:
 - **Formatting** — larvae registers as a document formatter, so *Format Document* and format-on-save run `larvae fmt`'s formatter on the current file.
 - **Highlighting** — the bundled grammar is luau-lsp's (so plain Luau colors identically), extended with the `class`, `extern`, `extends`, and `public` syntax; `const` and `export` come with it upstream. On files larvae serves, the server's semantic tokens refine it with tree-aware coloring.
 - **Code actions** — fixes the server offers for its findings appear as quick fixes, next to the extension's own allow-flag suppressions.
-- **Navigation and highlighting** — go to definition, find references, rename, workspace symbol search, document highlights, folding, selection ranges, document links, color previews, and semantic coloring, from larvae's own parser.
-- **Analyzer features** — hover, completion with auto-imports, signature help, inlay hints, and go to type definition, when the `larvae-lsp` binary carries the Luau analyzer.
+- **Navigation and highlighting** — go to definition, find references, rename, workspace symbol search, document highlights, folding, selection ranges, document links, and color previews, from larvae's own parser.
+- **Analyzer features** — hover, completion with auto-imports, signature help, inlay hints, go to type definition, and semantic coloring, when the `larvae-lsp` binary carries the Luau analyzer and `larvae-lsp.analyzer` is on. With the analyzer off, the server that owns the types colours the file.
 - **Worm types** — type definitions supplied by the project's worms are written to `.larvae/definitions/` and listed in luau-lsp's `types.definitionFiles` setting, so its typing picks them up. The two extensions stay independent; without luau-lsp the setting is inert.
 
 ## Requirements
