@@ -100,24 +100,6 @@
 					"scope": "resource",
 					"markdownDescription": "Hide larvae's output directory (the `output` entry in `larvae.toml`) from the explorer by managing a `files.exclude` entry in the workspace settings. Only applies to folders that contain a `larvae.toml`."
 				},
-				"larvae-lsp.enabled": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Start the larvae language server at all. Off, the extension starts nothing and another server owns the files. Project side: `enabled` under `[lsp]`; where both speak, the project wins."
-				},
-				"larvae-lsp.claimOnly": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), and leave plain Luau and Lua to other tools. Off, larvae lints and formats every Luau file. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
-				},
-				"larvae-lsp.verbose": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Write what the extension does to the **Larvae** output channel: the server it launched, what the project claims, and every restart with its reason. For the protocol traffic itself, set `larvae.trace.server` instead."
-				},
 				"larvae.trace.server": {
 					"type": "string",
 					"enum": [

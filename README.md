@@ -51,19 +51,16 @@ Write the same key in your own settings to turn it off again.
 | `larvae.processOnSave` | `false` | Run `larvae process` for the containing workspace folder whenever a Luau file is saved. Output lands in the *Larvae Process* output channel. |
 | `larvae.processProfile` | `""` | Profile passed as `larvae process --profile <name>`, merging `[profile.<name>]` from `larvae.toml` over the base config. Empty builds with the base config. |
 | `larvae.hideOutputFolder` | `true` | Hide larvae's output directory (`output` in `larvae.toml`) from the explorer via a `files.exclude` entry. The entry is written once per folder; deleting it by hand sticks, and toggling the setting off and on writes it again. Only touches folders containing a `larvae.toml`. |
-| `larvae-lsp.enabled` | `true` | Start the language server at all. Project side: `[lsp] enabled`. |
-| `larvae-lsp.claimOnly` | `false` | Lint and format only worm-claimed files (e.g. `.luaux`), and leave plain Luau to other tools. Project side: `[lsp] claim_only`. |
-| `larvae-lsp.verbose` | `false` | Write the launch, the claims, and every restart to the *Larvae* output channel. |
 | `larvae.trace.server` | `off` | Log LSP traffic to the Larvae output channel (`messages` or `verbose`). |
 
-The `larvae-lsp.*` ids mirror the `[lsp]` table in `larvae.toml`: the editor setting is the personal side, the project file is the shared side, and where both speak, the project wins.
+The language server takes no editor settings. `larvae.toml` configures it under `[lsp]`: `enabled = false` turns it off, and `claim_only = true` limits it to worm-claimed files. The *Larvae* output channel shows the launch, the claims, and every restart.
 
 ## Working alongside luau-lsp
 
 luau-lsp serves the types, and larvae serves the lints, the format, and the fixes. Set larvae as the default formatter for Luau (see above), so that one formatter owns the file.
 
 - **Default**: larvae lints and formats plain Luau and Lua files, and the files that worms claim.
-- **Claim-only**: turn `larvae-lsp.claimOnly` on and larvae serves only the worm-claimed files (e.g. `.luaux`). Use it when another linter and formatter own plain Luau. A project can fix either mode for every contributor with `claim_only` under `[lsp]` in `larvae.toml`; the project file wins over the editor setting.
+- **Claim-only**: set `claim_only = true` under `[lsp]` in `larvae.toml`, and larvae serves only the worm-claimed files (e.g. `.luaux`). Use it when another linter and formatter own plain Luau.
 
 ## Commands
 

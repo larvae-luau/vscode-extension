@@ -174,38 +174,15 @@ function projectEnabled(): boolean | undefined {
 }
 
 // Whether the server gets plain Luau files, or only worm-claimed ones. The
-// project speaks through [lsp] claim_only and wins over the claimOnly editor
-// setting, so a checkout behaves the same for the whole team. In claim-only
-// mode larvae lints and formats only the files of worms.
+// project decides through [lsp] claim_only, so a checkout behaves the same
+// for the whole team. In claim-only mode larvae lints and formats only the
+// files of worms. The default matches the server's: claim_only = false.
 function includePlainLuau(): boolean {
-	let projectSaysServeAll = false
 	for (const folder of vscode.workspace.workspaceFolders ?? []) {
-		const spoken = readClaimOnly(folder)
-		if (spoken === true) return false
-		if (spoken === false) projectSaysServeAll = true
+		if (readClaimOnly(folder) === true) return false
 	}
-	if (projectSaysServeAll) return true
 
-	// the server's own default is claim_only = false, and the extension
-	// always sends its declared value, so the two agree
-	const claimOnly =
-		vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('claimOnly') ??
-		false
-	return !claimOnly
-}
-
-/*
-The `larvae-lsp` settings, whole, for the initialize handshake.
-
-The server reads `enabled` and `claimOnly` from them. A change to either
-restarts the client, so the next initialize carries the new values.
-*/
-function editorSettings(): Record<string, unknown> {
-	return (
-		vscode.workspace
-			.getConfiguration()
-			.get<Record<string, unknown>>('larvae-lsp') ?? {}
-	)
+	return true
 }
 
 type Claims = { claims?: string[] }
@@ -302,16 +279,8 @@ async function documentSelectorFor(): Promise<
 }
 
 async function startClient(): Promise<void> {
-	/*
-	The project wins here too. A server the client never starts reads
-	no larvae.toml, so the editor setting alone would keep a project
-	that says `enabled = true` from ever being served.
-	*/
-	const lspSettings = vscode.workspace.getConfiguration('larvae-lsp')
-	const enabled =
-		projectEnabled() ?? lspSettings.get<boolean>('enabled') ?? true
-
-	if (!enabled) return
+	// `[lsp] enabled = false` in larvae.toml turns the server off.
+	if (projectEnabled() === false) return
 
 	const command = await findServerCommand()
 	const args = ['lsp']
@@ -332,13 +301,6 @@ async function startClient(): Promise<void> {
 		// one channel for every client this session starts, or each
 		// restart would leave another dead panel behind
 		outputChannel: output(),
-		// editor-side settings travel at initialize; the server treats
-		// larvae.toml as the project side and wins where both speak
-		initializationOptions: {
-			settings: {
-				'larvae-lsp': editorSettings(),
-			},
-		},
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
 				for (const diagnostic of diagnostics) {
@@ -503,20 +465,14 @@ function output(): vscode.OutputChannel {
 }
 
 /*
-A line in the server channel, when `larvae-lsp.verbose` asks for it.
+A line in the server channel.
 
-The setting is for the reports that start "it does nothing": the launch
-line, the settings the client sent, what the project claimed, and every
-restart with its reason. `larvae.trace.server` covers the protocol
-traffic itself, which is a different volume of noise.
+The lines answer the reports that start "it does nothing": the launch
+line, what the project claimed, and every restart with its reason. They
+are a few lines per session, and the channel stays hidden until opened.
+`larvae.trace.server` covers the protocol traffic itself.
 */
 function log(message: string): void {
-	if (
-		!vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('verbose')
-	) {
-		return
-	}
-
 	const now = new Date().toISOString().slice(11, 23)
 
 	output().appendLine(`[${now}] ${message}`)
@@ -766,11 +722,7 @@ export async function activate(
 
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeConfiguration(async (event) => {
-			if (
-				event.affectsConfiguration('larvae.path') ||
-				event.affectsConfiguration('larvae-lsp.enabled') ||
-				event.affectsConfiguration('larvae-lsp.claimOnly')
-			) {
+			if (event.affectsConfiguration('larvae.path')) {
 				await stopClient()
 				await startClient()
 			}
