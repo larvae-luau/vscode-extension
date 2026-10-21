@@ -1,7 +1,7 @@
 {
 	"name": "larvae",
 	"displayName": "Larvae",
-	"description": "Formatting, lints, and Luau language features, powered by the larvae toolchain",
+	"description": "Formatting, lints, and lint fixes for Luau, from the larvae toolchain",
 	"version": "0.8.1",
 	"publisher": "AndrewBordis",
 	"license": "MIT",
@@ -72,30 +72,8 @@
 				"command": "larvae.restartServer",
 				"title": "Restart Language Server",
 				"category": "Larvae"
-			},
-			{
-				"command": "larvae.computeBytecode",
-				"title": "Compute Bytecode for file",
-				"category": "Larvae"
-			},
-			{
-				"command": "larvae.computeCompilerRemarks",
-				"title": "Compute Compiler Remarks for file",
-				"category": "Larvae"
 			}
 		],
-		"menus": {
-			"editor/title": [
-				{
-					"when": "larvae.servesActiveFile",
-					"command": "larvae.computeBytecode"
-				},
-				{
-					"when": "larvae.servesActiveFile",
-					"command": "larvae.computeCompilerRemarks"
-				}
-			]
-		},
 		"configuration": {
 			"title": "Larvae",
 			"properties": {
@@ -126,274 +104,19 @@
 					"type": "boolean",
 					"default": true,
 					"scope": "window",
-					"markdownDescription": "Start the larvae language server at all. Off, the extension starts nothing and another server owns the files. To keep the server but turn off only the Luau type intelligence, use `larvae-lsp.analyzer` below. Project side: `enabled` under `[lsp]`; where both speak, the project wins."
-				},
-				"larvae-lsp.analyzer": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Serve the Luau type intelligence: hover, completion, type diagnostics, signatures, inlay hints, and the compiled views. Off, larvae still runs and serves what it always served — lints, format, code actions, and the outline — on claimed and plain files alike, and it leaves the semantic colours to the server that owns the types. This is the half `larvae-lsp.enabled` keeps. Project side: `analyzer` under `[lsp]`."
+					"markdownDescription": "Start the larvae language server at all. Off, the extension starts nothing and another server owns the files. Project side: `enabled` under `[lsp]`; where both speak, the project wins."
 				},
 				"larvae-lsp.claimOnly": {
 					"type": "boolean",
 					"default": false,
 					"scope": "window",
-					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), leaving plain Luau and Lua to luau-lsp so the two run side by side. Turn it on when stock luau-lsp already runs here. Off, larvae serves every Luau file as a drop-in. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
-				},
-				"larvae-lsp.characterType": {
-					"type": "string",
-					"enum": [
-						"r15",
-						"r6",
-						"notSet"
-					],
-					"default": "r15",
-					"scope": "window",
-					"markdownDescription": "What `Player.Character` types to. `r15` and `r6` carry the body parts of their rig, so `player.Character.Humanoid` resolves with no cast. `notSet` types it as the union of the two. Project side: `character_type` under `[lsp]`."
-				},
-				"larvae-lsp.sourcemap": {
-					"type": "string",
-					"default": "sourcemap.json",
-					"scope": "window",
-					"markdownDescription": "Path to the rojo sourcemap, relative to the project root. The server reads it for the instance tree, and says nothing when the file is absent. Project side: `sourcemap` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
-				},
-				"larvae-lsp.sourcemapAutogenerate": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "The server runs the sourcemap command itself, so the map follows every file the project adds or moves. With no command set, rojo is inferred from its project file. Project side: `sourcemap_autogenerate` under `[lsp]`."
-				},
-				"larvae-lsp.rojoProjectFile": {
-					"type": "string",
-					"default": "default.project.json",
-					"scope": "window",
-					"markdownDescription": "The rojo project the inferred sourcemap command reads, relative to the project root. Project side: `rojo_project_file` under `[lsp]`."
-				},
-				"larvae-lsp.robloxSecurityLevel": {
-					"type": "string",
-					"enum": [
-						"none",
-						"local-user-security",
-						"plugin-security",
-						"roblox-script-security"
-					],
-					"default": "roblox-script-security",
-					"scope": "window",
-					"markdownDescription": "Which Roblox API surface the analyzer types against. `roblox-script-security` holds every member and is what larvae has always loaded; a plugin sees less, and a live game less again. Project side: `roblox_security_level` under `[lsp]`."
-				},
-				"larvae-lsp.definitions": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					},
-					"default": [],
-					"scope": "window",
-					"markdownDescription": "Extra type definition files, loaded after the platform globals. Paths are relative to the project root. Project side: `definitions` under `[lsp]`."
+					"markdownDescription": "Serve only the files a worm claims (e.g. `.luaux`), and leave plain Luau and Lua to other tools. Off, larvae lints and formats every Luau file. Project side: `claim_only` under `[lsp]` in `larvae.toml`; where both speak, the project wins."
 				},
 				"larvae-lsp.verbose": {
 					"type": "boolean",
 					"default": false,
 					"scope": "window",
 					"markdownDescription": "Write what the extension does to the **Larvae** output channel: the server it launched, what the project claims, and every restart with its reason. For the protocol traffic itself, set `larvae.trace.server` instead."
-				},
-				"larvae-lsp.documentation": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					},
-					"default": [],
-					"scope": "window",
-					"markdownDescription": "luau-lsp `documentationFiles` JSON databases, loaded after the bundled Roblox reference and read for hover and completion. Paths are relative to the project root, and a later file wins where two document one symbol. Project side: `documentation` under `[lsp]`."
-				},
-				"larvae-lsp.sourcemapCommand": {
-					"type": "string",
-					"default": "",
-					"scope": "window",
-					"markdownDescription": "The command that generates the sourcemap, run through the shell in the project root. Empty infers rojo from its project file. A project on another sync tool names its own generator here, ideally one that watches. Project side: `sourcemap_command` under `[lsp]`."
-				},
-				"larvae-lsp.completion.enabled": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Provide completion. Off answers every request with an empty list. Project side: `[lsp.completion] enabled`."
-				},
-				"larvae-lsp.completion.showKeywords": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Offer the keywords that fit the position, beside the names. Project side: `[lsp.completion] show_keywords`."
-				},
-				"larvae-lsp.completion.imports.enabled": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Offer a service or module the file has not imported yet, and insert the import on accept. Project side: `[lsp.completion.imports] enabled`."
-				},
-				"larvae-lsp.completion.hideDeprecated": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Drop deprecated functions and properties from the completion list entirely. Off, they stay listed with a strikethrough. Project side: `[lsp.completion] hide_deprecated`."
-				},
-				"larvae-lsp.completion.imports.requireStyle": {
-					"type": "string",
-					"enum": [
-						"auto",
-						"alwaysRelative",
-						"alwaysAbsolute",
-						"nearestAbsolute"
-					],
-					"default": "auto",
-					"scope": "window",
-					"markdownDescription": "How a module auto-import spells its require. `auto` writes an alias where one covers the module and the relative form elsewhere; `alwaysAbsolute` writes the `@game` path; `nearestAbsolute` takes the shortest stable anchor: an alias, then `@game`, then relative. Project side: `[lsp.completion.imports] require_style`."
-				},
-				"larvae-lsp.completion.imports.useConst": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "An auto-import binds with `const` instead of `local`. Project side: `use_const` under `[lsp.completion.imports]` in `larvae.toml`; where both speak, the project wins."
-				},
-				"larvae-lsp.hover.enabled": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Show type information on hover. Project side: `[lsp.hover] enabled`."
-				},
-				"larvae-lsp.hover.showTableKinds": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Keep the `{| |}` markers that say a table is sealed. Project side: `[lsp.hover] show_table_kinds`."
-				},
-				"larvae-lsp.hover.includeStringLength": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Say how long a string literal is, on the hover card of one. Project side: `[lsp.hover] include_string_length`."
-				},
-				"larvae-lsp.signatureHelp.enabled": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Show the call signature while typing arguments. Project side: `[lsp.signature_help] enabled`."
-				},
-				"larvae-lsp.inlayHints.variableTypes": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Show the inferred type of a local the author left unannotated. Project side: `[lsp.inlay_hints] variable_types`."
-				},
-				"larvae-lsp.inlayHints.parameterTypes": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Show the inferred type of a parameter the author left unannotated. Project side: `[lsp.inlay_hints] parameter_types`."
-				},
-				"larvae-lsp.inlayHints.functionReturnTypes": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Show the inferred return type of a function, after its parameter list. Project side: `[lsp.inlay_hints] function_return_types`."
-				},
-				"larvae-lsp.inlayHints.parameterNames": {
-					"type": "string",
-					"enum": [
-						"none",
-						"literals",
-						"all"
-					],
-					"default": "none",
-					"scope": "window",
-					"markdownDescription": "Show the name of each parameter before the argument that fills it: on no call, on literal arguments, or on every one. Project side: `[lsp.inlay_hints] parameter_names`."
-				},
-				"larvae-lsp.inlayHints.updateDelay": {
-					"type": "number",
-					"default": 700,
-					"minimum": 0,
-					"scope": "window",
-					"markdownDescription": "No effect since larvae 0.8: every hint request computes against the current text, the way luau-lsp does. Kept so a settings file that wrote it still loads."
-				},
-				"larvae-lsp.inlayHints.typeHintMaxLength": {
-					"type": "number",
-					"default": 50,
-					"minimum": 10,
-					"scope": "window",
-					"markdownDescription": "Cut an inlay type hint longer than this. Project side: `[lsp.inlay_hints] type_hint_max_length`."
-				},
-				"larvae-lsp.fflags.enableByDefault": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Enable all boolean Luau FFlags by default; `#larvae-lsp.fflags.override#` still wins per flag. Project side: `[lsp.fflags] enable_by_default`."
-				},
-				"larvae-lsp.fflags.enableNewSolver": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Enable the flags Luau's new type solver needs; `#larvae-lsp.fflags.override#` still wins per flag. Project side: `[lsp.fflags] enable_new_solver`."
-				},
-				"larvae-lsp.fflags.override": {
-					"type": "object",
-					"default": {},
-					"scope": "window",
-					"additionalProperties": {
-						"type": "string"
-					},
-					"markdownDescription": "FFlags passed to the Luau analyzer, by name, e.g. `{ \"LuauSolverV2\": \"true\" }`. Wins over every other fflags setting. Project side: `[lsp.fflags] override`."
-				},
-				"larvae-lsp.bytecode.debugLevel": {
-					"type": "number",
-					"default": 1,
-					"minimum": 0,
-					"maximum": 2,
-					"scope": "window",
-					"markdownDescription": "The `debugLevel` used when compiling bytecode. Project side: `[lsp.bytecode] debug_level`."
-				},
-				"larvae-lsp.bytecode.typeInfoLevel": {
-					"type": "number",
-					"default": 1,
-					"minimum": 0,
-					"maximum": 1,
-					"scope": "window",
-					"markdownDescription": "The `typeInfoLevel` used when compiling bytecode. Project side: `[lsp.bytecode] type_info_level`."
-				},
-				"larvae-lsp.bytecode.vectorLib": {
-					"type": "string",
-					"default": "Vector3",
-					"scope": "window",
-					"markdownDescription": "The `vectorLib` used when compiling bytecode. Project side: `[lsp.bytecode] vector_lib`."
-				},
-				"larvae-lsp.bytecode.vectorCtor": {
-					"type": "string",
-					"default": "new",
-					"scope": "window",
-					"markdownDescription": "The `vectorCtor` used when compiling bytecode. Project side: `[lsp.bytecode] vector_ctor`."
-				},
-				"larvae-lsp.bytecode.vectorType": {
-					"type": "string",
-					"default": "Vector3",
-					"scope": "window",
-					"markdownDescription": "The `vectorType` used when compiling bytecode. Project side: `[lsp.bytecode] vector_type`."
-				},
-				"larvae-lsp.studio.enabled": {
-					"type": "boolean",
-					"default": false,
-					"scope": "window",
-					"markdownDescription": "Open the loopback socket the Roblox Studio plugin posts the live DataModel to, so the type checker sees the instances the place actually holds. Off by default because it opens a listening socket. Project side: `[lsp.studio] enabled`."
-				},
-				"larvae-lsp.studio.port": {
-					"type": "number",
-					"default": 3773,
-					"minimum": 1,
-					"maximum": 65535,
-					"scope": "window",
-					"markdownDescription": "The port the Studio plugin posts to; the plugin ships with the same number. Project side: `[lsp.studio] port`."
-				},
-				"larvae-lsp.index.enabled": {
-					"type": "boolean",
-					"default": true,
-					"scope": "window",
-					"markdownDescription": "Keep the project-wide symbol index that workspace symbol search reads. Off keeps document symbols for the open file only. Project side: `[lsp.index] enabled`."
 				},
 				"larvae.trace.server": {
 					"type": "string",
