@@ -1,22 +1,20 @@
 # Larvae for VS Code
 
-Luau language support powered by [larvae](https://github.com/larvae-luau/larvae).
+Lints, formatting, and lint fixes for Luau, from [larvae](https://github.com/larvae-luau/larvae).
 
-The extension launches larvae's language server and talks to it over stdio:
+The extension launches `larvae lsp` and talks to it over stdio. Types come from [luau-lsp](https://github.com/JohnnyMorganz/luau-lsp), which runs beside it:
 
-- **Diagnostics** — larvae's lints show up in the editor and the Problems panel as you type, with their native severities (errors as errors, warnings as warnings).
-- **Formatting** — larvae registers as a document formatter, so *Format Document* and format-on-save run `larvae fmt`'s formatter on the current file.
-- **Highlighting** — the bundled grammar is luau-lsp's (so plain Luau colors identically), extended with the `class`, `extern`, `extends`, and `public` syntax; `const` and `export` come with it upstream. On files larvae serves, the server's semantic tokens refine it with tree-aware coloring.
-- **Code actions** — fixes the server offers for its findings appear as quick fixes, next to the extension's own allow-flag suppressions.
-- **Navigation and highlighting** — go to definition, find references, rename, workspace symbol search, document highlights, folding, selection ranges, document links, and color previews, from larvae's own parser.
-- **Analyzer features** — hover, completion with auto-imports, signature help, inlay hints, go to type definition, and semantic coloring, when the `larvae-lsp` binary carries the Luau analyzer and `larvae-lsp.analyzer` is on. With the analyzer off, the server that owns the types colours the file.
-- **Worm types** — type definitions supplied by the project's worms are written to `.larvae/definitions/` and listed in luau-lsp's `types.definitionFiles` setting, so its typing picks them up. The two extensions stay independent; without luau-lsp the setting is inert.
+- **Diagnostics**: larvae's lints show up in the editor and the Problems panel as you type, with their native severities (errors as errors, warnings as warnings).
+- **Formatting**: larvae registers as a document formatter, so *Format Document* and format-on-save run `larvae fmt`'s formatter on the current file.
+- **Highlighting**: the bundled grammar is luau-lsp's (so plain Luau colors identically), extended with the `class`, `extern`, `extends`, and `public` syntax; `const` and `export` come with it upstream.
+- **Code actions**: fixes the server offers for its findings appear as quick fixes, next to the extension's own allow-flag suppressions.
+- **Worm files**: a file a worm of the project claims (e.g. `.luaux`) gets the diagnostics and the layout of that worm.
 
 ## Requirements
 
 The `larvae` binary must be installed (`larvae self install` puts it in `~/.larvae/bin`, which the extension finds automatically). If it lives somewhere else, point `larvae.path` at it.
 
-Hover, completions, and type diagnostics come from the `larvae-lsp` binary, which carries the Luau analyzer. When it sits beside the `larvae` binary (or on `PATH`), the extension launches it instead of `larvae lsp`; without it, lint diagnostics and formatting still work through `larvae lsp` alone.
+Install the [luau-lsp extension](https://marketplace.visualstudio.com/items?itemName=JohnnyMorganz.luau-lsp) beside this one. It serves hover, completion, type diagnostics, and navigation. larvae serves none of these, so the two servers never answer the same request.
 
 ## Format on save
 
@@ -33,7 +31,7 @@ Set larvae as the default formatter for Luau and enable format-on-save in your `
 
 ## Completions inside strings
 
-A require path is typed inside a string, and VS Code hides quick suggestions there. The extension ships a `[luau]` default that turns them on, so `require("` offers the paths of the project:
+A require path is typed inside a string, and VS Code hides quick suggestions there. The extension ships a `[luau]` default that turns them on, so luau-lsp can offer the paths of the project after `require("`:
 
 ```json
 {
@@ -53,57 +51,20 @@ Write the same key in your own settings to turn it off again.
 | `larvae.processOnSave` | `false` | Run `larvae process` for the containing workspace folder whenever a Luau file is saved. Output lands in the *Larvae Process* output channel. |
 | `larvae.processProfile` | `""` | Profile passed as `larvae process --profile <name>`, merging `[profile.<name>]` from `larvae.toml` over the base config. Empty builds with the base config. |
 | `larvae.hideOutputFolder` | `true` | Hide larvae's output directory (`output` in `larvae.toml`) from the explorer via a `files.exclude` entry. The entry is written once per folder; deleting it by hand sticks, and toggling the setting off and on writes it again. Only touches folders containing a `larvae.toml`. |
-| `larvae-lsp.enabled` | `true` | Start the language server at all. Project side: `[lsp] enabled`. |
-| `larvae-lsp.claimOnly` | `false` | Serve only worm-claimed files (e.g. `.luaux`), leaving plain Luau to luau-lsp. Turn it on when stock luau-lsp already runs here. Project side: `[lsp] claim_only`. |
-| `larvae-lsp.sourcemap` | `"sourcemap.json"` | Path to the rojo sourcemap, relative to the project root. The server reads it for the instance tree of the project. Project side: `[lsp] sourcemap`. |
-| `larvae-lsp.completion.enabled` | `true` | Provide completion at all. Project side: `[lsp.completion] enabled`. |
-| `larvae-lsp.completion.showKeywords` | `true` | Offer fitting keywords beside the names. Project side: `[lsp.completion] show_keywords`. |
-| `larvae-lsp.completion.imports.enabled` | `true` | Offer not-yet-imported services and modules, inserting the import on accept. Project side: `[lsp.completion.imports] enabled`. |
-| `larvae-lsp.completion.imports.useConst` | `true` | Auto-imports bind with `const` instead of `local`. Project side: `[lsp.completion.imports] use_const`. |
-| `larvae-lsp.hover.enabled` | `true` | Show type information on hover. Project side: `[lsp.hover] enabled`. |
-| `larvae-lsp.hover.showTableKinds` | `false` | Keep the markers that say a table is sealed. Project side: `[lsp.hover] show_table_kinds`. |
-| `larvae-lsp.hover.includeStringLength` | `true` | Say how long a string literal is, on the hover card of one. Project side: `[lsp.hover] include_string_length`. |
-| `larvae-lsp.signatureHelp.enabled` | `true` | Show the call signature while typing arguments. Project side: `[lsp.signature_help] enabled`. |
-| `larvae-lsp.inlayHints.variableTypes` | `false` | Show inferred types on unannotated locals. Project side: `[lsp.inlay_hints] variable_types`. |
-| `larvae-lsp.inlayHints.parameterTypes` | `false` | Show inferred types on unannotated parameters. Project side: `[lsp.inlay_hints] parameter_types`. |
-| `larvae-lsp.inlayHints.typeHintMaxLength` | `50` | Cut longer inlay type hints. Project side: `[lsp.inlay_hints] type_hint_max_length`. |
-| `larvae-lsp.fflags.enableByDefault` | `false` | Enable all boolean Luau FFlags by default. Project side: `[lsp.fflags] enable_by_default`. |
-| `larvae-lsp.fflags.enableNewSolver` | `false` | Enable the flags Luau's new type solver needs. Project side: `[lsp.fflags] enable_new_solver`. |
-| `larvae-lsp.fflags.override` | `{}` | FFlags passed to the Luau analyzer by name; wins per flag. Project side: `[lsp.fflags] override`. |
-| `larvae-lsp.bytecode.*` | | `debugLevel` (1), `typeInfoLevel` (1), `vectorLib` (`Vector3`), `vectorCtor` (`new`), `vectorType` (`Vector3`), used when compiling bytecode. Project side: `[lsp.bytecode]`. |
-| `larvae-lsp.studio.enabled` | `false` | Open the loopback socket the Roblox Studio plugin posts the live DataModel to. Project side: `[lsp.studio] enabled`. |
-| `larvae-lsp.studio.port` | `3773` | The port the Studio plugin posts to. Project side: `[lsp.studio] port`. |
-| `larvae-lsp.index.enabled` | `true` | Keep the project-wide symbol index behind workspace symbol search. Project side: `[lsp.index] enabled`. |
 | `larvae.trace.server` | `off` | Log LSP traffic to the Larvae output channel (`messages` or `verbose`). |
 
-The `larvae-lsp.*` ids mirror the `[lsp]` table in `larvae.toml`: the editor setting is the personal side, the project file is the shared side, and where both speak, the project wins.
-
-### Inlay hints carried over from luau-lsp
-
-Three inlay-hint settings fall back to luau-lsp's own, so a settings file brought over from luau-lsp keeps the hints it already had:
-
-| larvae | falls back to |
-| --- | --- |
-| `larvae-lsp.inlayHints.variableTypes` | `luau-lsp.inlayHints.variableTypes` |
-| `larvae-lsp.inlayHints.parameterTypes` | `luau-lsp.inlayHints.parameterTypes` |
-| `larvae-lsp.inlayHints.typeHintMaxLength` | `luau-lsp.inlayHints.typeHintMaxLength` |
-
-The larvae setting wins whenever you write one. Where you leave it at its default and the luau-lsp id carries a value you wrote, larvae sends that value to its server instead. These three ids are the only ones borrowed.
+The language server takes no editor settings. `larvae.toml` configures it under `[lsp]`: `enabled = false` turns it off, and `claim_only = true` limits it to worm-claimed files. The *Larvae* output channel shows the launch, the claims, and every restart.
 
 ## Working alongside luau-lsp
 
-larvae can replace luau-lsp or run beside it; the difference is which files the server attaches to:
+luau-lsp serves the types, and larvae serves the lints, the format, and the fixes. Set larvae as the default formatter for Luau (see above), so that one formatter owns the file.
 
-- **Drop-in (default)** — larvae serves plain Luau and Lua files beside the worm-claimed ones.
-- **Side by side** — turn `larvae-lsp.claimOnly` on and larvae serves only worm-claimed files (e.g. `.luaux`), so luau-lsp keeps normal Luau to itself. A project can fix either mode for every contributor with `claim_only` under `[lsp]` in `larvae.toml`; the project file wins over the editor setting.
+- **Default**: larvae lints and formats plain Luau and Lua files, and the files that worms claim.
+- **Claim-only**: set `claim_only = true` under `[lsp]` in `larvae.toml`, and larvae serves only the worm-claimed files (e.g. `.luaux`). Use it when another linter and formatter own plain Luau.
 
 ## Commands
 
-- **Larvae: Restart Language Server** — restarts `larvae lsp` (also happens automatically when `larvae.path` changes).
-- **Larvae: Compute Bytecode for file** — compiles the active file and shows the bytecode listing in a read-only document beside it.
-- **Larvae: Compute Compiler Remarks for file** — the same, showing what the compiler says about the optimizations it made.
-
-Both commands ask which optimization level to compile at; `larvae-lsp.bytecode.*` supplies the debug level, the type info level, and the vector configuration. A file a worm claims compiles through that worm first, so the listing is of the Luau the place receives. The view follows the file: it redraws as you type and as you switch editors. Both need the `larvae-lsp` binary, which carries the analyzer that compiles the source; without it the view says so.
+- **Larvae: Restart Language Server**: restarts `larvae lsp` (also happens automatically when `larvae.path` changes).
 
 ## Development
 

@@ -100,60 +100,6 @@ async function findServerCommand(): Promise<string> {
 	return best
 }
 
-type ServerLaunch = { command: string; args: string[] }
-
-// The larvae-lsp binary carries the Luau analyzer (hover, completions, type
-// diagnostics); `larvae lsp` serves lint and format alone. Prefer the
-// dedicated binary beside the resolved CLI, and fall back to the subcommand.
-// An explicit larvae.path is respected exactly.
-async function findServerLaunch(): Promise<ServerLaunch> {
-	const configured = vscode.workspace
-		.getConfiguration('larvae')
-		.get<string>('path')
-		?.trim()
-
-	const command = await findServerCommand()
-
-	if (configured) {
-		const args = path.basename(command).startsWith('larvae-lsp') ? [] : ['lsp']
-		return { command, args }
-	}
-
-	const dedicated =
-		process.platform === 'win32' ? 'larvae-lsp.exe' : 'larvae-lsp'
-
-	if (path.isAbsolute(command)) {
-		const sibling = path.join(path.dirname(command), dedicated)
-		if (fs.existsSync(sibling)) return { command: sibling, args: [] }
-	} else {
-		const onPath = findOnPath(dedicated)
-		if (onPath) return { command: onPath, args: [] }
-	}
-
-	/*
-	A tool manager installs the one binary its manifest names, so a
-	larvae from rokit, aftman, or ember has no server beside it. The
-	install directory holds the server whichever tool owns the CLI, so
-	it is the last place to look before the fallback.
-	*/
-	const home = process.env.HOME ?? process.env.USERPROFILE
-	if (home) {
-		const installed = path.join(home, '.larvae', 'bin', dedicated)
-		if (fs.existsSync(installed)) return { command: installed, args: [] }
-	}
-
-	/*
-	The fallback serves the lints and the formatter and none of the
-	types. It is a working editor, not a broken one, but a user who
-	expected hover deserves the reason and the one command that fixes
-	it.
-	*/
-	log('larvae-lsp was not found; serving without the analyzer')
-	log('run `larvae self install` to fetch the server and its analyzer')
-
-	return { command, args: ['lsp'] }
-}
-
 const LINT_DOCS_URL = 'https://larvae-luau.github.io/docs/reference/linting'
 
 function rawLintCode(code: vscode.Diagnostic['code']): string | undefined {
@@ -228,65 +174,15 @@ function projectEnabled(): boolean | undefined {
 }
 
 // Whether the server gets plain Luau files, or only worm-claimed ones. The
-// project speaks through [lsp] claim_only and wins over the claimOnly editor
-// setting, so a checkout behaves the same for the whole team. In claim-only
-// mode larvae runs beside luau-lsp instead of replacing it.
+// project decides through [lsp] claim_only, so a checkout behaves the same
+// for the whole team. In claim-only mode larvae lints and formats only the
+// files of worms. The default matches the server's: claim_only = false.
 function includePlainLuau(): boolean {
-	let projectSaysServeAll = false
 	for (const folder of vscode.workspace.workspaceFolders ?? []) {
-		const spoken = readClaimOnly(folder)
-		if (spoken === true) return false
-		if (spoken === false) projectSaysServeAll = true
+		if (readClaimOnly(folder) === true) return false
 	}
-	if (projectSaysServeAll) return true
 
-	// the server's own default is claim_only = false, and the extension
-	// always sends its declared value, so the two agree
-	const claimOnly =
-		vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('claimOnly') ??
-		false
-	return !claimOnly
-}
-
-/*
-The inlay-hint settings that fall back to luau-lsp's own, by name.
-
-/*
-The `larvae-lsp` settings, whole, for the initialize handshake.
-
-The client sends `{ settings: { "larvae-lsp": ... } }` on every settings
-change, and this is the lookup that notification makes. Initialize sends the
-same blob from the same place, so the server reads one shape and a fresh
-session starts on the values the user already has.
-
-The `luau-lsp.inlayHints` values are not borrowed any more. Unchecking a
-larvae box back to its default removes the entry, and a borrow would
-quietly revive the old luau-lsp choice, so the box read as dead. The
-larvae settings alone decide.
-*/
-function editorSettings(): Record<string, unknown> {
-	return (
-		vscode.workspace
-			.getConfiguration()
-			.get<Record<string, unknown>>('larvae-lsp') ?? {}
-	)
-}
-
-/*
-Hands the merged settings to a running server.
-
-The client's own configurationSection sync would send the raw `larvae-lsp`
-section and drop the luau-lsp fallback, so this notification replaces it and
-carries the blob initialize carried.
-*/
-function sendSettings(): void {
-	client
-		?.sendNotification('workspace/didChangeConfiguration', {
-			settings: { 'larvae-lsp': editorSettings() },
-		})
-		.catch(() => {
-			// the server is not running; its next initialize carries the values
-		})
+	return true
 }
 
 type Claims = { claims?: string[] }
@@ -294,24 +190,6 @@ type Claims = { claims?: string[] }
 // The extensions the project's worms claim, without the dot. Refreshed
 // whenever the client starts, which is also whenever larvae.toml changes.
 let claimed: string[] = []
-
-// The CLI, which answers `worm claims`. An explicit larvae.path may name the
-// server binary instead, and that one has no subcommands, so the sibling CLI
-// beside it answers for it.
-async function findCliCommand(): Promise<string> {
-	const command = await findServerCommand()
-
-	if (!path.basename(command).startsWith('larvae-lsp')) return command
-
-	const cli = process.platform === 'win32' ? 'larvae.exe' : 'larvae'
-
-	if (path.isAbsolute(command)) {
-		const sibling = path.join(path.dirname(command), cli)
-		if (fs.existsSync(sibling)) return sibling
-	}
-
-	return findOnPath(cli) ?? cli
-}
 
 /*
 The file extensions the project's worms claim, e.g. [".luaux"].
@@ -328,7 +206,7 @@ function readClaims(
 	folder: vscode.WorkspaceFolder,
 ): Promise<string[] | undefined> {
 	return new Promise((resolve) => {
-		void findCliCommand().then((command) => {
+		void findServerCommand().then((command) => {
 			execFile(
 				command,
 				['worm', 'claims'],
@@ -401,18 +279,11 @@ async function documentSelectorFor(): Promise<
 }
 
 async function startClient(): Promise<void> {
-	/*
-	The project wins here too. A server the client never starts reads
-	no larvae.toml, so the editor setting alone would keep a project
-	that says `enabled = true` from ever being served.
-	*/
-	const lspSettings = vscode.workspace.getConfiguration('larvae-lsp')
-	const enabled =
-		projectEnabled() ?? lspSettings.get<boolean>('enabled') ?? true
+	// `[lsp] enabled = false` in larvae.toml turns the server off.
+	if (projectEnabled() === false) return
 
-	if (!enabled) return
-
-	const { command, args } = await findServerLaunch()
+	const command = await findServerCommand()
+	const args = ['lsp']
 
 	const serverOptions: ServerOptions = {
 		command,
@@ -421,8 +292,8 @@ async function startClient(): Promise<void> {
 
 	const documentSelector = await documentSelectorFor()
 
-	// Nothing to serve: no worm claims a file, and plain Luau went to
-	// luau-lsp. Starting a server that every request declines helps nobody.
+	// Nothing to serve: no worm claims a file, and claim-only mode leaves plain
+	// Luau to other tools. A server that every request declines helps nobody.
 	if (documentSelector.length === 0) return
 
 	const clientOptions: LanguageClientOptions = {
@@ -430,34 +301,9 @@ async function startClient(): Promise<void> {
 		// one channel for every client this session starts, or each
 		// restart would leave another dead panel behind
 		outputChannel: output(),
-		// editor-side settings travel at initialize and on change; the server
-		// treats larvae.toml as the project side and wins where both speak
-		initializationOptions: {
-			settings: {
-				'larvae-lsp': editorSettings(),
-			},
-		},
 		middleware: {
 			handleDiagnostics(uri, diagnostics, next) {
 				for (const diagnostic of diagnostics) {
-					// analyzer findings render the way luau-lsp renders its own:
-					// source Luau, the error number in parens linking to luau.org
-					if (diagnostic.source === 'larvae-types') {
-						diagnostic.source = 'Luau'
-
-						const raw =
-							diagnostic.code !== null && typeof diagnostic.code === 'object'
-								? diagnostic.code.value
-								: diagnostic.code
-						if (raw !== undefined && raw !== null && raw !== '') {
-							diagnostic.code = {
-								value: raw,
-								target: vscode.Uri.parse('https://luau.org/types'),
-							}
-						}
-						continue
-					}
-
 					if (diagnostic.source !== 'larvae') continue
 
 					const code = rawLintCode(diagnostic.code)
@@ -484,9 +330,6 @@ async function startClient(): Promise<void> {
 
 	try {
 		await client.start()
-		// the start refreshed `claimed`, which decides what larvae serves
-		updateServesContext()
-		void syncWormDefinitions()
 		log(`started${serverVersion ? ` (larvae ${serverVersion})` : ''}`)
 		log(`claims: ${claimed.length ? claimed.join(', ') : 'none'}`)
 	} catch {
@@ -503,98 +346,6 @@ async function startClient(): Promise<void> {
 				'workbench.action.openSettings',
 				'larvae.path',
 			)
-		}
-	}
-}
-
-type WormDefinition = { worm: string; text: string }
-
-// where worm-supplied definition files land, relative to the project root;
-// larvae's init already gitignores .larvae/
-const DEFINITIONS_DIR = path.join('.larvae', 'definitions')
-
-function definitionFileName(worm: string): string {
-	return `${worm.replace(/[^\w.-]/g, '-')}.d.luau`
-}
-
-// Fetches the type definitions the project's worms supply and hands them to
-// luau-lsp: written as .d.luau files and listed in its definitionFiles
-// setting, so the types apply without either extension knowing the other.
-async function syncWormDefinitions(): Promise<void> {
-	if (!client) return
-
-	let definitions: WormDefinition[]
-	try {
-		const reply = await client.sendRequest<{ definitions?: WormDefinition[] }>(
-			'larvae/definitions',
-		)
-		definitions = reply?.definitions ?? []
-	} catch {
-		// an older server has no larvae/definitions; nothing to sync
-		return
-	}
-
-	for (const folder of vscode.workspace.workspaceFolders ?? []) {
-		if (!fs.existsSync(path.join(folder.uri.fsPath, 'larvae.toml'))) continue
-
-		const dir = path.join(folder.uri.fsPath, DEFINITIONS_DIR),
-			wanted = new Map(
-				definitions.map((d) => [definitionFileName(d.worm), d.text]),
-			)
-
-		try {
-			if (wanted.size > 0) fs.mkdirSync(dir, { recursive: true })
-
-			for (const [name, text] of wanted) {
-				const file = path.join(dir, name)
-				let current: string | undefined
-				try {
-					current = fs.readFileSync(file, 'utf8')
-				} catch {
-					// not written yet
-				}
-				if (current !== text) fs.writeFileSync(file, text)
-			}
-
-			// drop files for worms that no longer supply definitions
-			if (fs.existsSync(dir)) {
-				for (const name of fs.readdirSync(dir)) {
-					if (!wanted.has(name)) fs.unlinkSync(path.join(dir, name))
-				}
-			}
-		} catch {
-			// the project dir is not writable; leave luau-lsp untouched
-			continue
-		}
-
-		// maintain our entries in luau-lsp's definition file list, keeping any
-		// the user added themselves
-		const ours = [...wanted.keys()].map((name) =>
-			[DEFINITIONS_DIR, name].join(path.sep),
-		)
-
-		const config = vscode.workspace.getConfiguration('luau-lsp', folder.uri),
-			inspected = config.inspect<string[]>('types.definitionFiles'),
-			current =
-				inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? [],
-			kept = current.filter((entry) => !entry.startsWith(DEFINITIONS_DIR)),
-			next = [...kept, ...ours]
-
-		if (
-			next.length === current.length &&
-			next.every((entry, i) => entry === current[i])
-		) {
-			continue
-		}
-
-		try {
-			await config.update(
-				'types.definitionFiles',
-				next.length > 0 ? next : undefined,
-				vscode.ConfigurationTarget.WorkspaceFolder,
-			)
-		} catch {
-			// workspace settings are not writable here; skip quietly
 		}
 	}
 }
@@ -714,20 +465,14 @@ function output(): vscode.OutputChannel {
 }
 
 /*
-A line in the server channel, when `larvae-lsp.verbose` asks for it.
+A line in the server channel.
 
-The setting is for the reports that start "it does nothing": the launch
-line, the settings the client sent, what the project claimed, and every
-restart with its reason. `larvae.trace.server` covers the protocol
-traffic itself, which is a different volume of noise.
+The lines answer the reports that start "it does nothing": the launch
+line, what the project claimed, and every restart with its reason. They
+are a few lines per session, and the channel stays hidden until opened.
+`larvae.trace.server` covers the protocol traffic itself.
 */
 function log(message: string): void {
-	if (
-		!vscode.workspace.getConfiguration('larvae-lsp').get<boolean>('verbose')
-	) {
-		return
-	}
-
 	const now = new Date().toISOString().slice(11, 23)
 
 	output().appendLine(`[${now}] ${message}`)
@@ -933,194 +678,6 @@ async function stopClient(): Promise<void> {
 	await stopping.stop()
 }
 
-/*
-The compiled views of the open file: its bytecode, and the compiler's
-remarks about it.
-
-luau-lsp shows the same two under its own prefix, and this mirrors it: the
-command asks for an optimization level, opens a read-only document in the
-second column, and a content provider asks the server for the listing. The
-view follows the file, so it redraws on every edit and on every switch of
-the active editor.
-*/
-const COMPILED_VIEWS = [
-	{
-		command: 'larvae.computeBytecode',
-		scheme: 'larvae-bytecode',
-		name: 'bytecode',
-		method: 'larvae/bytecode',
-	},
-	{
-		command: 'larvae.computeCompilerRemarks',
-		scheme: 'larvae-remarks',
-		name: 'compiler-remarks',
-		method: 'larvae/compilerRemarks',
-	},
-] as const
-
-// The level both views compile at, chosen whenever a command runs. luau-lsp
-// keeps one level for both and starts at O2, and larvae's server reads the
-// same number as its own default.
-let optimizationLevel = 2
-
-// Long enough for the edit to reach the server before the request that reads
-// it. luau-lsp waits the same 10ms for the same reason.
-const REFRESH_DELAY_MS = 10
-
-async function askOptimizationLevel(): Promise<number> {
-	const picked = await vscode.window.showQuickPick(
-		[
-			{
-				label: 'O2',
-				detail:
-					'Includes optimizations that harm debuggability such as inlining',
-				picked: true,
-			},
-			{
-				label: 'O1',
-				detail:
-					"Baseline optimization level that doesn't prevent debuggability",
-			},
-			{ label: 'None', detail: 'No optimization' },
-		],
-		{
-			title: 'Select Optimization Level',
-			placeHolder: 'Select optimization level',
-		},
-	)
-
-	if (picked?.label === 'None') return 0
-	if (picked?.label === 'O2') return 2
-	return 1
-}
-
-// A file larvae answers for, on disk. The virtual view itself is neither.
-function isServedFile(document: vscode.TextDocument): boolean {
-	return document.uri.scheme === 'file' && isServed(document)
-}
-
-function activeServedEditor(): vscode.TextEditor | undefined {
-	const editor = vscode.window.activeTextEditor
-	return editor && isServedFile(editor.document) ? editor : undefined
-}
-
-const NO_LISTING = `-- larvae has no listing for this file.
---
--- The larvae-lsp binary carries the analyzer that compiles it, and a file
--- that does not compile has nothing to show.
-`
-
-const NO_SERVER = '-- The larvae language server is not running.\n'
-
-class CompiledView implements vscode.TextDocumentContentProvider {
-	readonly uri: vscode.Uri
-	private readonly changed = new vscode.EventEmitter<vscode.Uri>()
-
-	constructor(
-		scheme: string,
-		name: string,
-		private readonly method: string,
-	) {
-		this.uri = vscode.Uri.parse(`${scheme}://bytecode/${name}.luau`)
-	}
-
-	get onDidChange(): vscode.Event<vscode.Uri> {
-		return this.changed.event
-	}
-
-	refresh(): void {
-		this.changed.fire(this.uri)
-	}
-
-	async provideTextDocumentContent(): Promise<string> {
-		const editor = activeServedEditor()
-		if (!editor) return ''
-
-		const running = client
-		if (!running) return NO_SERVER
-
-		const params = {
-			textDocument: running.code2ProtocolConverter.asTextDocumentIdentifier(
-				editor.document,
-			),
-			optimizationLevel,
-		}
-
-		try {
-			// null is a server with no analyzer, or a file it could not compile
-			return (
-				(await running.sendRequest<string | null>(this.method, params)) ??
-				NO_LISTING
-			)
-		} catch {
-			return NO_LISTING
-		}
-	}
-}
-
-function registerCompiledViews(context: vscode.ExtensionContext): void {
-	for (const view of COMPILED_VIEWS) {
-		const content = new CompiledView(view.scheme, view.name, view.method)
-
-		context.subscriptions.push(
-			vscode.workspace.registerTextDocumentContentProvider(
-				view.scheme,
-				content,
-			),
-
-			vscode.workspace.onDidChangeTextDocument((event) => {
-				if (isServedFile(event.document)) {
-					setTimeout(() => content.refresh(), REFRESH_DELAY_MS)
-				}
-			}),
-
-			vscode.window.onDidChangeActiveTextEditor((editor) => {
-				if (editor && isServedFile(editor.document)) content.refresh()
-			}),
-
-			vscode.commands.registerTextEditorCommand(
-				view.command,
-				async (editor) => {
-					if (!isServedFile(editor.document)) {
-						vscode.window.showInformationMessage(
-							'Larvae compiles no view for this file. Open a Luau file, or one a worm claims.',
-						)
-						return
-					}
-
-					optimizationLevel = await askOptimizationLevel()
-
-					const document = await vscode.workspace.openTextDocument(content.uri)
-					// the view may already be open on an older listing
-					content.refresh()
-
-					await vscode.window.showTextDocument(document, {
-						viewColumn: vscode.ViewColumn.Two,
-						preserveFocus: true,
-					})
-				},
-			),
-		)
-	}
-}
-
-/*
-Whether larvae answers for the file the editor shows, as a `when` clause.
-
-The editor-title buttons read it. A worm's file carries a language id larvae
-never registered, so a clause on resourceLangId would hide the buttons on
-exactly the files larvae exists for.
-*/
-function updateServesContext(): void {
-	const editor = vscode.window.activeTextEditor
-
-	void vscode.commands.executeCommand(
-		'setContext',
-		'larvae.servesActiveFile',
-		editor !== undefined && isServedFile(editor.document),
-	)
-}
-
 export async function activate(
 	context: vscode.ExtensionContext,
 ): Promise<void> {
@@ -1163,25 +720,11 @@ export async function activate(
 		}),
 	)
 
-	registerCompiledViews(context)
-
-	context.subscriptions.push(
-		vscode.window.onDidChangeActiveTextEditor(() => updateServesContext()),
-	)
-
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeConfiguration(async (event) => {
-			if (
-				event.affectsConfiguration('larvae.path') ||
-				event.affectsConfiguration('larvae-lsp.enabled') ||
-				event.affectsConfiguration('larvae-lsp.claimOnly') ||
-				// The analyzer half advertises capabilities, and only a restart re-advertises.
-				event.affectsConfiguration('larvae-lsp.analyzer')
-			) {
+			if (event.affectsConfiguration('larvae.path')) {
 				await stopClient()
 				await startClient()
-			} else if (event.affectsConfiguration('larvae-lsp')) {
-				sendSettings()
 			}
 
 			if (event.affectsConfiguration('larvae.hideOutputFolder')) {
